@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect, ChangeEvent } from 'react';
+import { api } from '../utils/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -36,7 +37,7 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface ProfileProps {
   userType: 'user' | 'organizer';
@@ -46,6 +47,7 @@ interface ProfileProps {
     name: string;
     email: string;
     userType: string;
+    accessToken: string;
   } | null;
 }
 
@@ -90,9 +92,89 @@ interface OrganizerProfile extends UserProfile {
   };
 }
 
+// ProfileForm Component - Defined outside to prevent re-creation on every render
+interface ProfileFormProps {
+  data: UserProfile | OrganizerProfile;
+  onChange: (data: UserProfile | OrganizerProfile) => void;
+  readonly?: boolean;
+  userType: 'user' | 'organizer';
+}
+
+const ProfileFormComponent = ({ data, onChange, readonly = false, userType }: ProfileFormProps) => (
+  <div className="space-y-6">
+    <div className="flex flex-col items-center space-y-4">
+      <Avatar className="w-24 h-24">
+        <AvatarImage src={data.avatar} alt={data.name} />
+        <AvatarFallback className="text-2xl">
+          {data.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
+      {!readonly && (
+        <Button variant="outline" size="sm">
+          <Upload className="w-4 h-4 mr-2" />
+          Change Photo
+        </Button>
+      )}
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label htmlFor="name">Full Name</Label>
+        <Input
+          id="name"
+          value={data.name}
+          onChange={(e: any) => onChange({ ...data, name: e.target.value })}
+          disabled={readonly}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          type="email"
+          value={data.email}
+          onChange={(e: any) => onChange({ ...data, email: e.target.value })}
+          disabled={readonly}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="phone">Phone</Label>
+        <Input
+          id="phone"
+          value={data.phone}
+          onChange={(e: any) => onChange({ ...data, phone: e.target.value })}
+          disabled={readonly}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="location">Location</Label>
+        <Input
+          id="location"
+          value={data.location}
+          onChange={(e: any) => onChange({ ...data, location: e.target.value })}
+          disabled={readonly}
+        />
+      </div>
+    </div>
+
+    <div className="space-y-2">
+      <Label htmlFor="bio">Bio</Label>
+      <Textarea
+        id="bio"
+        value={data.bio}
+        onChange={(e: any) => onChange({ ...data, bio: e.target.value })}
+        disabled={readonly}
+        rows={4}
+        placeholder={`Tell others about yourself${userType === 'organizer' ? ' and your organization' : ''}...`}
+      />
+    </div>
+  </div>
+);
+
 export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
+  const [isLoading, setIsLoading] = useState(true);
   
   // Use real user data if available, otherwise fall back to sample data
   const defaultName = userProfile?.name || (userType === 'organizer' ? 'Sarah Johnson' : 'John Doe');
@@ -148,18 +230,108 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
     userType === 'organizer' ? organizerProfile : profile
   );
 
-  const handleSave = async () => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    if (userType === 'organizer') {
-      setOrganizerProfile(editProfile as OrganizerProfile);
-    } else {
-      setProfile(editProfile as UserProfile);
+  // Fetch complete profile data from database on component mount
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        setIsLoading(true);
+        const accessToken = userProfile?.accessToken;
+        if (!accessToken) {
+          console.log('No access token available');
+          setIsLoading(false);
+          return;
+        }
+
+        // Fetch profile from API using the existing api helper
+        const data = await api.getProfile(accessToken);
+        
+        if (data.profile) {
+          const fetchedProfile = data.profile;
+          const newUserProfile: UserProfile = {
+            name: fetchedProfile.name || defaultName,
+            email: fetchedProfile.email || defaultEmail,
+            phone: fetchedProfile.phone || '',
+            location: fetchedProfile.location || '',
+            bio: fetchedProfile.bio || '',
+            avatar: fetchedProfile.avatar_url || '',
+            memberSince: fetchedProfile.member_since || fetchedProfile.created_at || new Date().toISOString(),
+            preferences: fetchedProfile.preferences || {
+              emailNotifications: true,
+              smsNotifications: false,
+              marketingEmails: true,
+              eventReminders: true,
+            },
+          };
+
+          if (userType === 'organizer') {
+            // For organizers, also fetch organizer-specific data
+            setOrganizerProfile((prev) => ({
+              ...prev,
+              ...newUserProfile,
+            } as OrganizerProfile));
+            setEditProfile((prev) => ({
+              ...prev,
+              ...newUserProfile,
+            } as OrganizerProfile));
+          } else {
+            // For regular users
+            setProfile(newUserProfile);
+            setEditProfile(newUserProfile);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching profile data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfileData();
+  }, [userProfile?.accessToken, userType, defaultName, defaultEmail]);
+
+  const handleSave = useCallback(async () => {
+    try {
+      console.log('Saving profile:', editProfile);
+      
+      // Get access token from userProfile
+      const accessToken = userProfile?.accessToken || '';
+      if (!accessToken) {
+        toast.error('No access token available. Please log in again.');
+        return;
+      }
+      
+      // Only send fields that the backend accepts
+      const profileDataToSend = {
+        name: editProfile.name,
+        phone: editProfile.phone,
+        location: editProfile.location,
+        bio: editProfile.bio,
+      };
+      
+      console.log('Sending to backend:', profileDataToSend);
+      
+      // Call backend API to update user profile
+      const result = await api.updateUserProfile(profileDataToSend, accessToken);
+      
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      
+      // Update local state
+      if (userType === 'organizer') {
+        setOrganizerProfile(editProfile as OrganizerProfile);
+      } else {
+        setProfile(editProfile as UserProfile);
+      }
+      
+      setIsEditing(false);
+      toast.success('Profile updated successfully!');
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      toast.error('Failed to update profile');
     }
-    setIsEditing(false);
-    toast.success('Profile updated successfully!');
-  };
+  }, [editProfile, userType, userProfile?.accessToken]);
 
   const handleCancel = () => {
     setEditProfile(userType === 'organizer' ? organizerProfile : profile);
@@ -179,7 +351,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
 
   const updatePreference = (key: keyof UserProfile['preferences'], value: boolean) => {
     if (isEditing) {
-      setEditProfile(prev => ({
+      setEditProfile((prev: any) => ({
         ...prev,
         preferences: {
           ...prev.preferences,
@@ -188,7 +360,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
       }));
     } else {
       const updateFn = userType === 'organizer' ? setOrganizerProfile : setProfile;
-      updateFn(prev => ({
+      updateFn((prev: any) => ({
         ...prev,
         preferences: {
           ...prev.preferences,
@@ -200,6 +372,11 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
   };
 
   const currentProfile = userType === 'organizer' ? organizerProfile : profile;
+
+  // ProfileForm moved outside to prevent re-creation on every render
+  const handleProfileFormChange = (data: UserProfile | OrganizerProfile) => {
+    setEditProfile(data);
+  };
 
   const ProfileForm = ({ data, onChange, readonly = false }: {
     data: UserProfile | OrganizerProfile;
@@ -228,7 +405,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
           <Input
             id="name"
             value={data.name}
-            onChange={(e) => onChange({ ...data, name: e.target.value })}
+            onChange={(e: any) => onChange({ ...data, name: e.target.value })}
             disabled={readonly}
           />
         </div>
@@ -238,7 +415,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
             id="email"
             type="email"
             value={data.email}
-            onChange={(e) => onChange({ ...data, email: e.target.value })}
+            onChange={(e: any) => onChange({ ...data, email: e.target.value })}
             disabled={readonly}
           />
         </div>
@@ -247,7 +424,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
           <Input
             id="phone"
             value={data.phone}
-            onChange={(e) => onChange({ ...data, phone: e.target.value })}
+            onChange={(e: any) => onChange({ ...data, phone: e.target.value })}
             disabled={readonly}
           />
         </div>
@@ -256,7 +433,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
           <Input
             id="location"
             value={data.location}
-            onChange={(e) => onChange({ ...data, location: e.target.value })}
+            onChange={(e: any) => onChange({ ...data, location: e.target.value })}
             disabled={readonly}
           />
         </div>
@@ -267,7 +444,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
         <Textarea
           id="bio"
           value={data.bio}
-          onChange={(e) => onChange({ ...data, bio: e.target.value })}
+          onChange={(e: any) => onChange({ ...data, bio: e.target.value })}
           disabled={readonly}
           rows={4}
           placeholder={`Tell others about yourself${userType === 'organizer' ? ' and your organization' : ''}...`}
@@ -286,7 +463,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
               <Input
                 id="organizationName"
                 value={(data as OrganizerProfile).organizationName}
-                onChange={(e) => onChange({ ...data, organizationName: e.target.value } as OrganizerProfile)}
+                onChange={(e: any) => onChange({ ...data, organizationName: e.target.value } as OrganizerProfile)}
                 disabled={readonly}
               />
             </div>
@@ -295,7 +472,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
               <Input
                 id="website"
                 value={(data as OrganizerProfile).website}
-                onChange={(e) => onChange({ ...data, website: e.target.value } as OrganizerProfile)}
+                onChange={(e: any) => onChange({ ...data, website: e.target.value } as OrganizerProfile)}
                 disabled={readonly}
                 placeholder="https://yourwebsite.com"
               />
@@ -331,7 +508,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
                 <Input
                   id="twitter"
                   value={(data as OrganizerProfile).socialLinks.twitter}
-                  onChange={(e) => onChange({
+                  onChange={(e: any) => onChange({
                     ...data,
                     socialLinks: { ...(data as OrganizerProfile).socialLinks, twitter: e.target.value }
                   } as OrganizerProfile)}
@@ -347,7 +524,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
                 <Input
                   id="facebook"
                   value={(data as OrganizerProfile).socialLinks.facebook}
-                  onChange={(e) => onChange({
+                  onChange={(e: any) => onChange({
                     ...data,
                     socialLinks: { ...(data as OrganizerProfile).socialLinks, facebook: e.target.value }
                   } as OrganizerProfile)}
@@ -363,7 +540,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
                 <Input
                   id="instagram"
                   value={(data as OrganizerProfile).socialLinks.instagram}
-                  onChange={(e) => onChange({
+                  onChange={(e: any) => onChange({
                     ...data,
                     socialLinks: { ...(data as OrganizerProfile).socialLinks, instagram: e.target.value }
                   } as OrganizerProfile)}
@@ -379,7 +556,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
                 <Input
                   id="linkedin"
                   value={(data as OrganizerProfile).socialLinks.linkedin}
-                  onChange={(e) => onChange({
+                  onChange={(e: any) => onChange({
                     ...data,
                     socialLinks: { ...(data as OrganizerProfile).socialLinks, linkedin: e.target.value }
                   } as OrganizerProfile)}
@@ -411,7 +588,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
             <Label htmlFor="businessType">Business Type</Label>
             <Select 
               value={organizerProfile.businessDetails.businessType}
-              onValueChange={(value) => setOrganizerProfile(prev => ({
+              onValueChange={(value: any) => setOrganizerProfile((prev: any) => ({
                 ...prev,
                 businessDetails: { ...prev.businessDetails, businessType: value }
               }))}
@@ -434,7 +611,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
             <Input
               id="taxId"
               value={organizerProfile.businessDetails.taxId}
-              onChange={(e) => setOrganizerProfile(prev => ({
+              onChange={(e: any) => setOrganizerProfile((prev: any) => ({
                 ...prev,
                 businessDetails: { ...prev.businessDetails, taxId: e.target.value }
               }))}
@@ -449,7 +626,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
           <Textarea
             id="businessAddress"
             value={organizerProfile.businessDetails.businessAddress}
-            onChange={(e) => setOrganizerProfile(prev => ({
+            onChange={(e: any) => setOrganizerProfile((prev: any) => ({
               ...prev,
               businessDetails: { ...prev.businessDetails, businessAddress: e.target.value }
             }))}
@@ -536,7 +713,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
                 <Input
                   id="bankAccountName"
                   value={organizerProfile.paymentSettings.bankAccountName}
-                  onChange={(e) => setOrganizerProfile(prev => ({
+                  onChange={(e: any) => setOrganizerProfile((prev: any) => ({
                     ...prev,
                     paymentSettings: { ...prev.paymentSettings, bankAccountName: e.target.value }
                   }))}
@@ -548,7 +725,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
                 <Input
                   id="routingNumber"
                   value={organizerProfile.paymentSettings.routingNumber}
-                  onChange={(e) => setOrganizerProfile(prev => ({
+                  onChange={(e: any) => setOrganizerProfile((prev: any) => ({
                     ...prev,
                     paymentSettings: { ...prev.paymentSettings, routingNumber: e.target.value }
                   }))}
@@ -562,7 +739,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
                 id="bankAccountNumber"
                 type="password"
                 value={organizerProfile.paymentSettings.bankAccountNumber}
-                onChange={(e) => setOrganizerProfile(prev => ({
+                onChange={(e: any) => setOrganizerProfile((prev: any) => ({
                   ...prev,
                   paymentSettings: { ...prev.paymentSettings, bankAccountNumber: e.target.value }
                 }))}
@@ -586,7 +763,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
                 id="paypalEmail"
                 type="email"
                 value={organizerProfile.paymentSettings.paypalEmail}
-                onChange={(e) => setOrganizerProfile(prev => ({
+                onChange={(e: any) => setOrganizerProfile((prev: any) => ({
                   ...prev,
                   paymentSettings: { ...prev.paymentSettings, paypalEmail: e.target.value }
                 }))}
@@ -675,7 +852,10 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
                     </CardDescription>
                   </div>
                   {!isEditing ? (
-                    <Button onClick={() => setIsEditing(true)} variant="outline">
+                    <Button onClick={() => {
+                      setEditProfile(currentProfile);
+                      setIsEditing(true);
+                    }} variant="outline">
                       <Edit className="w-4 h-4 mr-2" />
                       Edit
                     </Button>
@@ -694,10 +874,11 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
                 </div>
               </CardHeader>
               <CardContent>
-                <ProfileForm
+                <ProfileFormComponent
                   data={isEditing ? editProfile : currentProfile}
                   onChange={setEditProfile}
                   readonly={!isEditing}
+                  userType={userType}
                 />
               </CardContent>
             </Card>
@@ -754,7 +935,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
                     </div>
                     <Switch
                       checked={isEditing ? editProfile.preferences.emailNotifications : currentProfile.preferences.emailNotifications}
-                      onCheckedChange={(checked) => updatePreference('emailNotifications', checked)}
+                      onCheckedChange={(checked: any) => updatePreference('emailNotifications', checked)}
                     />
                   </div>
 
@@ -772,7 +953,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
                     </div>
                     <Switch
                       checked={isEditing ? editProfile.preferences.smsNotifications : currentProfile.preferences.smsNotifications}
-                      onCheckedChange={(checked) => updatePreference('smsNotifications', checked)}
+                      onCheckedChange={(checked: any) => updatePreference('smsNotifications', checked)}
                     />
                   </div>
 
@@ -790,7 +971,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
                     </div>
                     <Switch
                       checked={isEditing ? editProfile.preferences.eventReminders : currentProfile.preferences.eventReminders}
-                      onCheckedChange={(checked) => updatePreference('eventReminders', checked)}
+                      onCheckedChange={(checked: any) => updatePreference('eventReminders', checked)}
                     />
                   </div>
 
@@ -808,7 +989,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
                     </div>
                     <Switch
                       checked={isEditing ? editProfile.preferences.marketingEmails : currentProfile.preferences.marketingEmails}
-                      onCheckedChange={(checked) => updatePreference('marketingEmails', checked)}
+                      onCheckedChange={(checked: any) => updatePreference('marketingEmails', checked)}
                     />
                   </div>
                 </div>

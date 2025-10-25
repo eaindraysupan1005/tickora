@@ -43,7 +43,7 @@ export function EventModal({ event, isOpen, onClose, onBuyTicket, userType }: Ev
           {/* Event Image */}
           <div className="relative aspect-video overflow-hidden rounded-lg">
             <ImageWithFallback
-              src={event.image}
+              src={event.image_url}
               alt={event.title}
               className="w-full h-full object-cover"
             />

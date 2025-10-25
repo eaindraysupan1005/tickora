@@ -319,7 +319,7 @@ export function Dashboard({ userType, events, userTickets, onCreateEvent, onView
                   <div className="flex items-start justify-between">
                     <div className="flex gap-4 flex-1">
                       <img 
-                        src={event.image} 
+                        src={event.image_url} 
                         alt={event.title}
                         className="w-24 h-24 object-cover rounded-lg"
                       />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from './ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -192,6 +192,13 @@ function AuthForm({ onLogin, onSignup, onClose }: {
 export function Header({ isLoggedIn, userType, currentView, onLogin, onSignup, onLogout, onShowDashboard, onShowHome, onShowTickets, onShowProfile, onShowHelp }: HeaderProps) {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Close auth dialog when user logs in
+  useEffect(() => {
+    if (isLoggedIn) {
+      setIsAuthOpen(false);
+    }
+  }, [isLoggedIn]);
 
   const Navigation = () => (
     <>

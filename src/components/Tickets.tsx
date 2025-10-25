@@ -123,7 +123,7 @@ export function Tickets({ events, userTickets, onViewEvent, onBrowseEvents }: Ti
       <Card className="overflow-hidden">
         <div className="relative">
           <img 
-            src={event.image} 
+            src={event.image_url} 
             alt={event.title}
             className="w-full h-48 object-cover"
           />

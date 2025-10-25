@@ -44,6 +44,18 @@ export const api = {
     return response.json()
   },
 
+  updateUserProfile: async (profileData: any, accessToken: string) => {
+    const response = await fetch(`${serverUrl}/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      },
+      body: JSON.stringify(profileData)
+    })
+    return response.json()
+  },
+
   // Event endpoints
   getEvents: async () => {
     const response = await fetch(`${serverUrl}/events`, {

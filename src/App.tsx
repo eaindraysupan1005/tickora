@@ -32,7 +32,7 @@ const sampleEvents: Event[] = [
       capacity: 500,
       attendees: 387,
       category: 'Conference',
-      image: 'https://images.unsplash.com/photo-1600320261634-78edd477fa1e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0ZWNoJTIwY29uZmVyZW5jZSUyMHNwZWFrZXJzfGVufDF8fHx8MTc1ODI3MDA1N3ww&ixlib=rb-4.1.0&q=80&w=1080',
+      image_url: 'https://images.unsplash.com/photo-1600320261634-78edd477fa1e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0ZWNoJTIwY29uZmVyZW5jZSUyMHNwZWFrZXJzfGVufDF8fHx8MTc1ODI3MDA1N3ww&ixlib=rb-4.1.0&q=80&w=1080',
       organizer: 'TechVision Events'
     },
     {
@@ -46,7 +46,7 @@ const sampleEvents: Event[] = [
       capacity: 16,
       attendees: 14,
       category: 'Workshop',
-      image: 'https://images.unsplash.com/photo-1701775696323-57c5e7640185?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb29raW5nJTIwd29ya3Nob3AlMjBoYW5kc3xlbnwxfHx8fDE3NTgyNzAwNjB8MA&ixlib=rb-4.1.0&q=80&w=1080',
+      image_url: 'https://images.unsplash.com/photo-1701775696323-57c5e7640185?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb29raW5nJTIwd29ya3Nob3AlMjBoYW5kc3xlbnwxfHx8fDE3NTgyNzAwNjB8MA&ixlib=rb-4.1.0&q=80&w=1080',
       organizer: 'Culinary Adventures'
     },
     {
@@ -60,7 +60,7 @@ const sampleEvents: Event[] = [
       capacity: 8000,
       attendees: 6200,
       category: 'Festival',
-      image: 'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtdXNpYyUyMGZlc3RpdmFsJTIwY3Jvd2R8ZW58MXx8fHwxNzU4MjUwNjA3fDA&ixlib=rb-4.1.0&q=80&w=1080',
+      image_url: 'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtdXNpYyUyMGZlc3RpdmFsJTIwY3Jvd2R8ZW58MXx8fHwxNzU4MjUwNjA3fDA&ixlib=rb-4.1.0&q=80&w=1080',
       organizer: 'Harmony Productions'
     },
     {
@@ -74,7 +74,7 @@ const sampleEvents: Event[] = [
       capacity: 18064,
       attendees: 18064,
       category: 'Sports',
-      image: 'https://images.unsplash.com/photo-1616353352910-15d970ac020b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzcG9ydHMlMjBiYXNrZXRiYWxsJTIwZ2FtZXxlbnwxfHx8fDE3NTgyNzAwNjZ8MA&ixlib=rb-4.1.0&q=80&w=1080',
+      image_url: 'https://images.unsplash.com/photo-1616353352910-15d970ac020b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzcG9ydHMlMjBiYXNrZXRiYWxsJTIwZ2FtZXxlbnwxfHx8fDE3NTgyNzAwNjZ8MA&ixlib=rb-4.1.0&q=80&w=1080',
       organizer: 'NBA Events'
     },
     {
@@ -88,7 +88,7 @@ const sampleEvents: Event[] = [
       capacity: 200,
       attendees: 87,
       category: 'Art & Culture',
-      image: 'https://images.unsplash.com/photo-1713779490284-a81ff6a8ffae?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhcnQlMjBnYWxsZXJ5JTIwZXhoaWJpdGlvbnxlbnwxfHx8fDE3NTgyNTg3Nzl8MA&ixlib=rb-4.1.0&q=80&w=1080',
+      image_url: 'https://images.unsplash.com/photo-1713779490284-a81ff6a8ffae?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhcnQlMjBnYWxsZXJ5JTIwZXhoaWJpdGlvbnxlbnwxfHx8fDE3NTgyNTg3Nzl8MA&ixlib=rb-4.1.0&q=80&w=1080',
       organizer: 'Modern Art Society'
     },
     {
@@ -102,7 +102,7 @@ const sampleEvents: Event[] = [
       capacity: 40,
       attendees: 32,
       category: 'Food & Drink',
-      image: 'https://images.unsplash.com/photo-1681219916726-036039b9b20d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmb29kJTIwd2luZSUyMHRhc3Rpbmd8ZW58MXx8fHwxNzU4MjcwMDczfDA&ixlib=rb-4.1.0&q=80&w=1080',
+      image_url: 'https://images.unsplash.com/photo-1681219916726-036039b9b20d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmb29kJTIwd2luZSUyMHRhc3Rpbmd8ZW58MXx8fHwxNzU4MjcwMDczfDA&ixlib=rb-4.1.0&q=80&w=1080',
       organizer: 'Vineyard Experiences'
     },
     {
@@ -116,7 +116,7 @@ const sampleEvents: Event[] = [
       capacity: 80,
       attendees: 45,
       category: 'Networking',
-      image: 'https://images.unsplash.com/photo-1675716921224-e087a0cca69a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxidXNpbmVzcyUyMG5ldHdvcmtpbmclMjBldmVudHxlbnwxfHx8fDE3NTgxNzQ4MjN8MA&ixlib=rb-4.1.0&q=80&w=1080',
+      image_url: 'https://images.unsplash.com/photo-1675716921224-e087a0cca69a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxidXNpbmVzcyUyMG5ldHdvcmtpbmclMjBldmVudHxlbnwxfHx8fDE3NTgxNzQ4MjN8MA&ixlib=rb-4.1.0&q=80&w=1080',
       organizer: 'SF Startup Community'
     },
     {
@@ -130,7 +130,7 @@ const sampleEvents: Event[] = [
       capacity: 50,
       attendees: 28,
       category: 'Other',
-      image: 'https://images.unsplash.com/photo-1588286840104-8957b019727f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx5b2dhJTIwZml0bmVzcyUyMGNsYXNzfGVufDF8fHx8MTc1ODI3MDA3OXww&ixlib=rb-4.1.0&q=80&w=1080',
+      image_url: 'https://images.unsplash.com/photo-1588286840104-8957b019727f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx5b2dhJTIwZml0bmVzcyUyMGNsYXNzfGVufDF8fHx8MTc1ODI3MDA3OXww&ixlib=rb-4.1.0&q=80&w=1080',
       organizer: 'Mindful Living Collective'
     },
     {
@@ -144,7 +144,7 @@ const sampleEvents: Event[] = [
       capacity: 150,
       attendees: 89,
       category: 'Conference',
-      image: 'https://images.unsplash.com/photo-1563807893646-b6598a2b6fdc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdGFydHVwJTIwcGl0Y2glMjBjb21wZXRpdGlvbnxlbnwxfHx8fDE3NTgyMTU1NTR8MA&ixlib=rb-4.1.0&q=80&w=1080',
+      image_url: 'https://images.unsplash.com/photo-1563807893646-b6598a2b6fdc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdGFydHVwJTIwcGl0Y2glMjBjb21wZXRpdGlvbnxlbnwxfHx8fDE3NTgyMTU1NTR8MA&ixlib=rb-4.1.0&q=80&w=1080',
       organizer: 'Silicon Valley Entrepreneurs'
     },
     {
@@ -158,7 +158,7 @@ const sampleEvents: Event[] = [
       capacity: 12,
       attendees: 9,
       category: 'Workshop',
-      image: 'https://images.unsplash.com/photo-1486892539609-d5322f938c50?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwaG90b2dyYXBoeSUyMHdvcmtzaG9wJTIwY2FtZXJhfGVufDF8fHx8MTc1ODE5MDQwNXww&ixlib=rb-4.1.0&q=80&w=1080',
+      image_url: 'https://images.unsplash.com/photo-1486892539609-d5322f938c50?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwaG90b2dyYXBoeSUyMHdvcmtzaG9wJTIwY2FtZXJhfGVufDF8fHx8MTc1ODE5MDQwNXww&ixlib=rb-4.1.0&q=80&w=1080',
       organizer: 'Visual Arts Academy'
     },
     {
@@ -172,7 +172,7 @@ const sampleEvents: Event[] = [
       capacity: 300,
       attendees: 156,
       category: 'Art & Culture',
-      image: 'https://images.unsplash.com/photo-1539964604210-db87088e0c2c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0aGVhdGVyJTIwcGVyZm9ybWFuY2UlMjBzdGFnZXxlbnwxfHx8fDE3NTgyNDg3NDl8MA&ixlib=rb-4.1.0&q=80&w=1080',
+      image_url: 'https://images.unsplash.com/photo-1539964604210-db87088e0c2c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0aGVhdGVyJTIwcGVyZm9ybWFuY2UlMjBzdGFnZXxlbnwxfHx8fDE3NTgyNDg3NDl8MA&ixlib=rb-4.1.0&q=80&w=1080',
       organizer: 'SF Theater Collective'
     },
     {
@@ -186,7 +186,7 @@ const sampleEvents: Event[] = [
       capacity: 5000,
       attendees: 3200,
       category: 'Sports',
-      image: 'https://images.unsplash.com/photo-1591078393633-eb8a3c88b83e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYXJhdGhvbiUyMHJ1bm5pbmclMjByYWNlfGVufDF8fHx8MTc1ODI3MDA5NHww&ixlib=rb-4.1.0&q=80&w=1080',
+      image_url: 'https://images.unsplash.com/photo-1591078393633-eb8a3c88b83e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYXJhdGhvbiUyMHJ1bm5pbmclMjByYWNlfGVufDF8fHx8MTc1ODI3MDA5NHww&ixlib=rb-4.1.0&q=80&w=1080',
       organizer: 'SF Marathon Association'
     }
   ];
@@ -272,9 +272,10 @@ export default function App() {
         return false;
       }
 
-      // Check if user type matches what they selected
-      if (result.profile && result.profile.userType !== type) {
-        toast.error(`This account is registered as ${result.profile.userType === 'organizer' ? 'Event Organizer' : 'Event Attendee'}`);
+      // Check if user type matches what they selected (database uses user_type with underscore)
+      const userType = result.profile?.user_type || result.profile?.userType;
+      if (result.profile && userType !== type) {
+        toast.error(`This account is registered as ${userType === 'organizer' ? 'Event Organizer' : 'Event Attendee'}`);
         return false;
       }
       
@@ -288,7 +289,7 @@ export default function App() {
           id: result.user?.id || 'temp-id',
           name: result.profile.name,
           email: result.profile.email,
-          userType: result.profile.userType,
+          userType: userType as 'user' | 'organizer',
           accessToken: result.session?.access_token || 'temp-token'
         });
         
@@ -481,7 +482,7 @@ export default function App() {
       capacity: eventData.capacity,
       attendees: 0,
       category: eventData.category,
-      image: eventData.image || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&h=400&fit=crop',
+      image_url: eventData.image_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&h=400&fit=crop',
       organizer: 'Your Organization'
     };
 
@@ -700,6 +701,7 @@ export default function App() {
               onCreateEvent={handleCreateEvent}
               onViewEvent={handleViewEvent}
               onShowDashboard={() => setCurrentView('dashboard')}
+              accessToken={userProfile?.accessToken}
             />
           ) : (
             <HomeView />

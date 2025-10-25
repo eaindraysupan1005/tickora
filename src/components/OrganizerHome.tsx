@@ -24,9 +24,10 @@ interface OrganizerHomeProps {
   onCreateEvent: (eventData: any) => void;
   onViewEvent: (event: Event) => void;
   onShowDashboard: () => void;
+  accessToken?: string;
 }
 
-export function OrganizerHome({ events, onCreateEvent, onViewEvent, onShowDashboard }: OrganizerHomeProps) {
+export function OrganizerHome({ events, onCreateEvent, onViewEvent, onShowDashboard, accessToken }: OrganizerHomeProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Filter events created by organizer (for prototype, show some events as organizer's)
@@ -363,6 +364,7 @@ export function OrganizerHome({ events, onCreateEvent, onViewEvent, onShowDashbo
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreateEvent={onCreateEvent}
+        accessToken={accessToken}
       />
     </div>
   );

@@ -15,7 +15,7 @@ export interface Event {
   capacity: number;
   attendees: number;
   category: string;
-  image: string;
+  image_url: string;
   organizer: string;
 }
 
@@ -42,7 +42,7 @@ export function EventCard({ event, onViewDetails, onBuyTicket, showActions = tru
     <Card className="group hover:shadow-lg transition-all duration-200 overflow-hidden">
       <div className="relative aspect-video overflow-hidden">
         <ImageWithFallback
-          src={event.image}
+          src={event.image_url}
           alt={event.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
         />
