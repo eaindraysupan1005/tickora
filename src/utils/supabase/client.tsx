@@ -23,6 +23,18 @@ export const api = {
     return response.json()
   },
 
+  signin: async (credentials: { email: string; password: string }) => {
+    const response = await fetch(`${serverUrl}/signin`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${publicAnonKey}`
+      },
+      body: JSON.stringify(credentials)
+    })
+    return response.json()
+  },
+
   getProfile: async (accessToken: string) => {
     const response = await fetch(`${serverUrl}/profile`, {
       headers: {

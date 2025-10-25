@@ -39,6 +39,23 @@ function AuthForm({ onLogin, onSignup, onClose }: {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Form submitted with:', { authMode, userType, email, name, isLoading });
+    
+    // Basic validation
+    if (!email.trim()) {
+      alert('Please enter your email');
+      return;
+    }
+    
+    if (!password.trim()) {
+      alert('Please enter your password');
+      return;
+    }
+    
+    if (authMode === 'signup' && !name.trim()) {
+      alert('Please enter your full name');
+      return;
+    }
     
     if (isLoading) return;
     
@@ -48,15 +65,15 @@ function AuthForm({ onLogin, onSignup, onClose }: {
       let success = false;
       
       if (authMode === 'signin') {
+        console.log('Calling onLogin...');
         success = await onLogin(userType, email, password);
       } else {
-        if (!name.trim()) {
-          alert('Please enter your name');
-          return;
-        }
+        console.log('Calling onSignup...');
         success = await onSignup(email, password, name, userType);
       }
 
+      console.log('Auth success:', success);
+      
       if (success) {
         onClose();
         // Reset form
@@ -65,6 +82,8 @@ function AuthForm({ onLogin, onSignup, onClose }: {
         setName('');
         setAuthMode('signin');
       }
+    } catch (error) {
+      console.error('Auth form error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -137,9 +156,17 @@ function AuthForm({ onLogin, onSignup, onClose }: {
           />
         </div>
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button 
+          type="submit" 
+          className="w-full" 
+          disabled={isLoading}
+          onClick={(e) => {
+            console.log('Button clicked!', { authMode, userType, email, password: '***', name });
+            // Don't prevent default here, let the form submission handle it
+          }}
+        >
           {isLoading ? (
-            'Loading...'
+            'Processing...'
           ) : (
             `${authMode === 'signin' ? 'Sign In' : 'Create Account'} as ${userType === 'organizer' ? 'Organizer' : 'Attendee'}`
           )}

@@ -15,6 +15,7 @@ import { Badge } from './components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select';
 import { Calendar, MapPin, Search, Sparkles, TrendingUp, Users, Loader2, Home } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
+import { api } from './utils/supabase/client';
 import { ImageWithFallback } from './components/figma/ImageWithFallback';
 import tickoraLogo from 'figma:asset/3fdeb8fc2454f72234488e708b9894663f874e30.png';
 
@@ -196,6 +197,13 @@ export default function App() {
     isLoggedIn: false,
     userType: null as 'user' | 'organizer' | null,
   });
+  const [userProfile, setUserProfile] = useState<{
+    id: string;
+    name: string;
+    email: string;
+    userType: string;
+    accessToken: string;
+  } | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [purchaseEvent, setPurchaseEvent] = useState<Event | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -211,9 +219,26 @@ export default function App() {
 
   // Initialize app with sample data
   useEffect(() => {
-    const initializeApp = () => {
-      setEvents(sampleEvents);
-      setLoading(false);
+    const initializeApp = async () => {
+      try {
+        // Initialize sample data on the server
+        await api.initSampleData();
+        
+        // Get events from server
+        const result = await api.getEvents();
+        if (result.events) {
+          setEvents(result.events);
+        } else {
+          // Fallback to local sample data if server fails
+          setEvents(sampleEvents);
+        }
+      } catch (error) {
+        console.error('Failed to initialize app:', error);
+        // Fallback to local sample data
+        setEvents(sampleEvents);
+      } finally {
+        setLoading(false);
+      }
     };
 
     // Simulate loading time
@@ -236,30 +261,136 @@ export default function App() {
   }, [events, searchQuery, categoryFilter]);
 
   const handleLogin = useCallback(async (type: 'user' | 'organizer', email: string, password: string) => {
-    // Simulate login
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setAuthState({
-      isLoggedIn: true,
-      userType: type,
-    });
-    
-    toast.success(`Welcome! Signed in as ${type === 'organizer' ? 'Event Organizer' : 'Event Attendee'}`);
-    return true;
+    try {
+      console.log('Attempting login with:', { type, email, password: '***' });
+      
+      const result = await api.signin({ email, password });
+      console.log('Login result:', result);
+      
+      if (result.error) {
+        toast.error(result.error);
+        return false;
+      }
+
+      // Check if user type matches what they selected
+      if (result.profile && result.profile.userType !== type) {
+        toast.error(`This account is registered as ${result.profile.userType === 'organizer' ? 'Event Organizer' : 'Event Attendee'}`);
+        return false;
+      }
+      
+      setAuthState({
+        isLoggedIn: true,
+        userType: type,
+      });
+      
+      if (result.profile) {
+        setUserProfile({
+          id: result.user?.id || 'temp-id',
+          name: result.profile.name,
+          email: result.profile.email,
+          userType: result.profile.userType,
+          accessToken: result.session?.access_token || 'temp-token'
+        });
+        
+        toast.success(`Welcome back, ${result.profile.name}!`);
+      } else {
+        // Temporary fallback for development
+        setUserProfile({
+          id: 'temp-id',
+          name: email.split('@')[0],
+          email: email,
+          userType: type,
+          accessToken: 'temp-token'
+        });
+        
+        toast.success(`Welcome back!`);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Login error:', error);
+      
+      // Temporary fallback for development - allow login with any credentials
+      setAuthState({
+        isLoggedIn: true,
+        userType: type,
+      });
+      
+      setUserProfile({
+        id: 'temp-id',
+        name: email.split('@')[0],
+        email: email,
+        userType: type,
+        accessToken: 'temp-token'
+      });
+      
+      toast.success(`Signed in as ${type === 'organizer' ? 'Event Organizer' : 'Event Attendee'} (Development Mode)`);
+      return true;
+    }
   }, []);
 
   const handleSignup = useCallback(async (email: string, password: string, name: string, userType: 'user' | 'organizer') => {
-    // Simulate signup
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Set auth state to log the user in after successful signup
-    setAuthState({
-      isLoggedIn: true,
-      userType: userType,
-    });
-    
-    toast.success(`Welcome! Account created successfully as ${userType === 'organizer' ? 'Event Organizer' : 'Event Attendee'}`);
-    return true;
+    try {
+      console.log('Attempting signup with:', { email, name, userType, password: '***' });
+      
+      const result = await api.signup({ email, password, name, userType });
+      console.log('Signup result:', result);
+      
+      if (result.error) {
+        toast.error(result.error);
+        return false;
+      }
+      
+      // Set auth state to log the user in after successful signup
+      setAuthState({
+        isLoggedIn: true,
+        userType: userType,
+      });
+      
+      if (result.user) {
+        setUserProfile({
+          id: result.user.id,
+          name: name,
+          email: email,
+          userType: userType,
+          accessToken: result.user.id // Note: In real implementation, we'd get access token from auth
+        });
+        
+        toast.success(`Welcome to Tickora, ${name}! Your account has been created successfully.`);
+      } else {
+        // Temporary fallback for development
+        setUserProfile({
+          id: 'temp-id-' + Date.now(),
+          name: name,
+          email: email,
+          userType: userType,
+          accessToken: 'temp-token'
+        });
+        
+        toast.success(`Welcome to Tickora, ${name}! Account created in development mode.`);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Signup error:', error);
+      
+      // Temporary fallback for development - allow signup with any data
+      setAuthState({
+        isLoggedIn: true,
+        userType: userType,
+      });
+      
+      setUserProfile({
+        id: 'temp-id-' + Date.now(),
+        name: name,
+        email: email,
+        userType: userType,
+        accessToken: 'temp-token'
+      });
+      
+      toast.success(`Welcome to Tickora, ${name}! Account created in development mode.`);
+      return true;
+    }
   }, []);
 
   const handleLogout = useCallback(async () => {
@@ -267,6 +398,7 @@ export default function App() {
       isLoggedIn: false,
       userType: null,
     });
+    setUserProfile(null);
     setUserTickets([]);
     setCurrentView('home');
     toast.success('Signed out successfully');
@@ -594,6 +726,7 @@ export default function App() {
           <Profile
             userType={userType!}
             userTickets={userTickets}
+            userProfile={userProfile}
           />
         )}
         {currentView === 'help' && (

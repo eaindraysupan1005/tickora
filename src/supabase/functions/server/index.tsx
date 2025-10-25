@@ -81,6 +81,45 @@ app.post('/make-server-f69ab98e/signup', async (c) => {
   }
 })
 
+// Sign in route
+app.post('/make-server-f69ab98e/signin', async (c) => {
+  try {
+    const { email, password } = await c.req.json()
+    
+    if (!email || !password) {
+      return c.json({ error: 'Email and password are required' }, 400)
+    }
+
+    // Sign in with Supabase Auth
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    })
+
+    if (error) {
+      console.log('Signin error:', error)
+      return c.json({ error: 'Invalid email or password' }, 401)
+    }
+
+    // Get user profile from KV store
+    const userProfile = await kv.get(`user:${data.user.id}`)
+    
+    if (!userProfile) {
+      return c.json({ error: 'User profile not found' }, 404)
+    }
+
+    return c.json({ 
+      user: data.user,
+      session: data.session,
+      profile: userProfile,
+      message: 'Signed in successfully' 
+    })
+  } catch (error) {
+    console.log('Server error during signin:', error)
+    return c.json({ error: 'Internal server error' }, 500)
+  }
+})
+
 // Get user profile
 app.get('/make-server-f69ab98e/profile', async (c) => {
   try {
@@ -250,11 +289,10 @@ app.post('/make-server-f69ab98e/tickets/purchase', async (c) => {
     };
 
     // Save both ticket and updated event
-    await kv.mset([
-      [`ticket:${ticketId}`, ticket],
-      [`event:${eventId}`, updatedEvent],
-      [`user_ticket:${user.id}:${ticketId}`, ticket]
-    ]);
+    await kv.mset(
+      [`ticket:${ticketId}`, `event:${eventId}`, `user_ticket:${user.id}:${ticketId}`],
+      [ticket, updatedEvent, ticket]
+    );
 
     return c.json({ 
       ticket, 

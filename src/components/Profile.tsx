@@ -41,6 +41,12 @@ import { toast } from 'sonner@2.0.3';
 interface ProfileProps {
   userType: 'user' | 'organizer';
   userTickets: Array<{ eventId: string; quantity: number; purchaseDate: string }>;
+  userProfile?: {
+    id: string;
+    name: string;
+    email: string;
+    userType: string;
+  } | null;
 }
 
 interface UserProfile {
@@ -84,13 +90,17 @@ interface OrganizerProfile extends UserProfile {
   };
 }
 
-export function Profile({ userType, userTickets }: ProfileProps) {
+export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   
+  // Use real user data if available, otherwise fall back to sample data
+  const defaultName = userProfile?.name || (userType === 'organizer' ? 'Sarah Johnson' : 'John Doe');
+  const defaultEmail = userProfile?.email || (userType === 'organizer' ? 'sarah@techevents.co' : 'john.doe@example.com');
+  
   const [profile, setProfile] = useState<UserProfile>({
-    name: userType === 'organizer' ? 'Sarah Johnson' : 'John Doe',
-    email: userType === 'organizer' ? 'sarah@techevents.co' : 'john.doe@example.com',
+    name: defaultName,
+    email: defaultEmail,
     phone: '+1 (555) 123-4567',
     location: 'San Francisco, CA',
     bio: userType === 'organizer' 
@@ -108,6 +118,8 @@ export function Profile({ userType, userTickets }: ProfileProps) {
 
   const [organizerProfile, setOrganizerProfile] = useState<OrganizerProfile>({
     ...profile,
+    name: defaultName,
+    email: defaultEmail,
     organizationName: 'TechEvents Co.',
     organizationLogo: '',
     website: 'https://techevents.co',
