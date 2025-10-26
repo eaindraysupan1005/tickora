@@ -76,13 +76,16 @@ export default function App() {
   // Memoize filtered events to prevent unnecessary recalculations
   const filteredEvents = useMemo(() => {
     return events.filter(event => {
+      // Safety check for event object
+      if (!event) return false;
+      
       const matchesSearch = searchQuery === '' || 
         (event.title && event.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (event.description && event.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (event.location && event.location.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (event.organizer && event.organizer.toLowerCase().includes(searchQuery.toLowerCase()));
       
-      const matchesCategory = categoryFilter === 'All' || event.category === categoryFilter;
+      const matchesCategory = categoryFilter === 'All' || (event.category && event.category === categoryFilter);
       
       return matchesSearch && matchesCategory;
     });
@@ -538,6 +541,7 @@ export default function App() {
         {currentView === 'dashboard' && (
           <Dashboard
             userType={userType!}
+            userProfile={userProfile}
             events={events}
             userTickets={userTickets}
             onCreateEvent={handleCreateEvent}
