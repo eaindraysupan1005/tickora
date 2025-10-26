@@ -127,7 +127,7 @@ export function Dashboard({ userType, events, userTickets, onCreateEvent, onView
   ]);
 
   // Filter events based on organizer (for prototype, show some events as organizer's)
-  const organizerEvents = userType === 'organizer' ? events.slice(0, 6) : [];
+  const organizerEvents = userType === 'organizer' ? events : [];
 
   // Filter and search events
   const filteredEvents = useMemo(() => {
