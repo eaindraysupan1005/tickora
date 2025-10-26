@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -12,6 +12,7 @@ import { Separator } from './ui/separator';
 import { Progress } from './ui/progress';
 import { EventCard, Event } from './EventCard';
 import { CreateEventModal } from './CreateEventModal';
+import { EventAttendees } from './EventAttendees';
 import { 
   Calendar, 
   Users, 
@@ -24,7 +25,6 @@ import {
   Search,
   BarChart3,
   QrCode,
-  Ticket,
   MapPin,
   Clock,
   Star,
@@ -46,6 +46,7 @@ import {
 
 interface DashboardProps {
   userType: 'user' | 'organizer';
+  userProfile: { id: string; name: string; email: string; userType: string; accessToken: string } | null;
   events: Event[];
   userTickets: Array<{ eventId: string; quantity: number; purchaseDate: string }>;
   onCreateEvent: (eventData: any) => void;
@@ -73,7 +74,7 @@ interface PromoCode {
   isActive: boolean;
 }
 
-export function Dashboard({ userType, events, userTickets, onCreateEvent, onViewEvent }: DashboardProps) {
+export function Dashboard({ userType, userProfile, events, userTickets, onCreateEvent, onViewEvent }: DashboardProps) {
   const [activeTab, setActiveTab] = useState('events');
   const [eventFilter, setEventFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -126,8 +127,20 @@ export function Dashboard({ userType, events, userTickets, onCreateEvent, onView
     }
   ]);
 
-  // Filter events based on organizer (for prototype, show some events as organizer's)
-  const organizerEvents = userType === 'organizer' ? events : [];
+  // For organizers, we would ideally fetch only their events using getOrganizerEvents
+  // For now, filter events based on organizer_id if available
+  const organizerEvents = useMemo(() => {
+    if (userType !== 'organizer') return [];
+    
+    // If organizer_id is populated on events, filter by current organizer's ID
+    if (userProfile?.id && events.some(e => e.organizer_id)) {
+      // Note: We'd need to fetch the organizer ID associated with the user
+      // For now, just return all events (organizer dashboard shows all anyway for testing)
+      return events;
+    }
+    
+    return events;
+  }, [userType, events, userProfile?.id]);
 
   // Filter and search events
   const filteredEvents = useMemo(() => {
@@ -135,20 +148,21 @@ export function Dashboard({ userType, events, userTickets, onCreateEvent, onView
 
     // Filter by status
     if (eventFilter === 'upcoming') {
-      filtered = filtered.filter(event => new Date(event.date) > new Date());
+      filtered = filtered.filter(event => event && new Date(event.date) > new Date());
     } else if (eventFilter === 'past') {
-      filtered = filtered.filter(event => new Date(event.date) <= new Date());
+      filtered = filtered.filter(event => event && new Date(event.date) <= new Date());
     } else if (eventFilter === 'drafts') {
       // Mock draft events (for prototype)
-      filtered = filtered.filter(event => event.attendees === 0);
+      filtered = filtered.filter(event => event && event.attendees === 0);
     }
 
     // Search filter
     if (searchQuery) {
-      filtered = filtered.filter(event =>
-        event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        event.location.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      filtered = filtered.filter(event => {
+        if (!event) return false;
+        return (event.title && event.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (event.location && event.location.toLowerCase().includes(searchQuery.toLowerCase()));
+      });
     }
 
     return filtered;
@@ -183,7 +197,7 @@ export function Dashboard({ userType, events, userTickets, onCreateEvent, onView
     const userStats = {
       totalTickets: userTickets.reduce((sum, ticket) => sum + ticket.quantity, 0),
       upcomingEvents: userEvents.filter(event => event && new Date(event.date) > new Date()).length,
-      totalSpent: userEvents.reduce((sum, event) => sum + (event.price * (event.ticketQuantity || 1)), 0)
+      totalSpent: userEvents.reduce((sum, event) => sum + (event ? event.price * (event.ticketQuantity || 1) : 0), 0)
     };
 
     return (
@@ -193,7 +207,7 @@ export function Dashboard({ userType, events, userTickets, onCreateEvent, onView
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Tickets</CardTitle>
-              <Ticket className="h-4 w-4 text-muted-foreground" />
+              <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{userStats.totalTickets}</div>
@@ -239,6 +253,7 @@ export function Dashboard({ userType, events, userTickets, onCreateEvent, onView
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {userEvents.map((event) => (
+                  event ? (
                   <div key={event.id} className="relative">
                     <EventCard 
                       event={event} 
@@ -251,6 +266,7 @@ export function Dashboard({ userType, events, userTickets, onCreateEvent, onView
                       </Badge>
                     </div>
                   </div>
+                  ) : null
                 ))}
               </div>
             )}
@@ -562,112 +578,6 @@ export function Dashboard({ userType, events, userTickets, onCreateEvent, onView
     </div>
   );
 
-  // Ticket Management Tab
-  const TicketManagementTab = () => (
-    <div className="space-y-6">
-      {/* Ticket Tiers */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Ticket Tiers</CardTitle>
-          <Button size="sm">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Tier
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {ticketTiers.map((tier) => (
-            <div key={tier.id} className="border rounded-lg p-4 space-y-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold">{tier.name}</h3>
-                  <p className="text-sm text-muted-foreground">{tier.description}</p>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold">${tier.price}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {tier.sold}/{tier.quantity} sold
-                  </div>
-                </div>
-              </div>
-              
-              <Progress value={(tier.sold / tier.quantity) * 100} className="h-2" />
-              
-              <div className="flex flex-wrap gap-1">
-                {tier.benefits.map((benefit, index) => (
-                  <Badge key={index} variant="outline" className="text-xs">
-                    {benefit}
-                  </Badge>
-                ))}
-              </div>
-              
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">
-                  <Edit className="w-4 h-4 mr-1" />
-                  Edit
-                </Button>
-                <Button variant="outline" size="sm">
-                  <Copy className="w-4 h-4 mr-1" />
-                  Duplicate
-                </Button>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* Promo Codes */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Promo Codes</CardTitle>
-          <Button size="sm">
-            <Plus className="w-4 h-4 mr-2" />
-            Create Code
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {promoCodes.map((promo) => (
-            <div key={promo.id} className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="font-mono font-bold text-lg">{promo.code}</div>
-                  <Badge variant={promo.isActive ? 'default' : 'secondary'}>
-                    {promo.isActive ? 'Active' : 'Inactive'}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch checked={promo.isActive} />
-                  <Button variant="outline" size="sm">
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Discount: </span>
-                  <span className="font-semibold">
-                    {promo.type === 'percentage' ? `${promo.discount}%` : `$${promo.discount}`}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Used: </span>
-                  <span className="font-semibold">{promo.used}/{promo.usageLimit}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Expires: </span>
-                  <span className="font-semibold">{new Date(promo.expiryDate).toLocaleDateString()}</span>
-                </div>
-                <div>
-                  <Progress value={(promo.used / promo.usageLimit) * 100} className="h-2" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    </div>
-  );
-
   // Check-in Tools Tab
   const CheckInTab = () => (
     <div className="space-y-6">
@@ -757,25 +667,34 @@ export function Dashboard({ userType, events, userTickets, onCreateEvent, onView
   );
 
   // Main Dashboard for Organizers
-  const OrganizerDashboard = () => (
+  const OrganizerDashboard = () => {
+    // If an event is selected for management, show the EventAttendees component
+    if (selectedEventForManagement && userProfile?.accessToken) {
+      return (
+        <EventAttendees
+          event={selectedEventForManagement}
+          accessToken={userProfile.accessToken}
+          onBack={() => setSelectedEventForManagement(null)}
+        />
+      );
+    }
+
+    // Otherwise show the tabs
+    return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="events" className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            Events
+        <TabsList className="flex w-full h-auto gap-2 p-1 bg-gray-100 rounded-lg">
+          <TabsTrigger value="events" className="flex items-center justify-center gap-2 py-2 px-3 flex-1 rounded-md transition-all font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-200 data-[state=active]:hover:bg-blue-700">
+            <Calendar className="w-4 h-4 flex-shrink-0" />
+            <span className="text-sm">Events</span>
           </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center gap-2">
-            <BarChart3 className="w-4 h-4" />
-            Analytics
+          <TabsTrigger value="analytics" className="flex items-center justify-center gap-2 py-2 px-3 flex-1 rounded-md transition-all font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-200 data-[state=active]:hover:bg-blue-700">
+            <BarChart3 className="w-4 h-4 flex-shrink-0" />
+            <span className="text-sm">Analytics</span>
           </TabsTrigger>
-          <TabsTrigger value="tickets" className="flex items-center gap-2">
-            <Ticket className="w-4 h-4" />
-            Tickets
-          </TabsTrigger>
-          <TabsTrigger value="checkin" className="flex items-center gap-2">
-            <QrCode className="w-4 h-4" />
-            Check-in
+          <TabsTrigger value="checkin" className="flex items-center justify-center gap-2 py-2 px-3 flex-1 rounded-md transition-all font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-200 data-[state=active]:hover:bg-blue-700">
+            <QrCode className="w-4 h-4 flex-shrink-0" />
+            <span className="text-sm">Check-in</span>
           </TabsTrigger>
         </TabsList>
 
@@ -785,10 +704,6 @@ export function Dashboard({ userType, events, userTickets, onCreateEvent, onView
 
         <TabsContent value="analytics">
           <AnalyticsTab />
-        </TabsContent>
-
-        <TabsContent value="tickets">
-          <TicketManagementTab />
         </TabsContent>
 
         <TabsContent value="checkin">
@@ -802,7 +717,8 @@ export function Dashboard({ userType, events, userTickets, onCreateEvent, onView
         onCreateEvent={onCreateEvent}
       />
     </div>
-  );
+    );
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">

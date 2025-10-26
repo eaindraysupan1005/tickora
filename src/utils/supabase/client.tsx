@@ -122,6 +122,15 @@ export const api = {
     return response.json()
   },
 
+  getEventTickets: async (eventId: string, accessToken: string) => {
+    const response = await fetch(`${serverUrl}/events/${eventId}/tickets`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      }
+    })
+    return response.json()
+  },
+
   // Dashboard endpoints
   getDashboardStats: async (accessToken: string) => {
     const response = await fetch(`${serverUrl}/dashboard/stats`, {

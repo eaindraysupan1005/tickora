@@ -17,6 +17,7 @@ export interface Event {
   category: string;
   image_url: string;
   organizer: string;
+  organizer_id?: string;
 }
 
 interface EventCardProps {
