@@ -139,25 +139,9 @@ export function EventAttendees({ event, accessToken, onBack }: EventAttendeesPro
 
   return (
     <div className="w-full space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onBack}
-          className="gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">{event.title}</h1>
-          <p className="text-sm text-gray-600">Manage event attendees and ticket status</p>
-        </div>
-      </div>
-
+      
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Total Attendees</CardTitle>
@@ -180,20 +164,10 @@ export function EventAttendees({ event, accessToken, onBack }: EventAttendeesPro
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Confirmed</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.confirmed}</div>
-            <p className="text-xs text-gray-500 mt-1">Tickets confirmed</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Refund Requests</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{stats.requestingRefund}</div>
+            <div className='text-yellow-500 text-2xl font-bold'>{stats.requestingRefund}</div> 
             <p className="text-xs text-gray-500 mt-1">Pending requests</p>
           </CardContent>
         </Card>
@@ -209,8 +183,7 @@ export function EventAttendees({ event, accessToken, onBack }: EventAttendeesPro
         </Card>
       </div>
 
-      <Separator />
-
+    
       {/* Filters and Search */}
       <Card>
         <CardHeader>

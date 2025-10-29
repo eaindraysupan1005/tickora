@@ -337,7 +337,7 @@ export function Dashboard({ userType, userProfile, events, userTickets, onCreate
             return (
               <Card key={event.id}>
                 <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-center justify-between">
                     <div className="flex gap-4 flex-1">
                       <img 
                         src={event.image_url} 
@@ -347,16 +347,6 @@ export function Dashboard({ userType, userProfile, events, userTickets, onCreate
                       <div className="flex-1 space-y-2">
                         <div className="flex items-start justify-between">
                           <h3 className="font-semibold text-lg">{event.title}</h3>
-                          <div className="flex gap-2">
-                            <Badge variant={isUpcoming ? 'default' : 'secondary'}>
-                              {isUpcoming ? 'Upcoming' : 'Past'}
-                            </Badge>
-                            <Badge 
-                              variant={salesPercentage < 30 ? 'destructive' : salesPercentage < 70 ? 'secondary' : 'default'}
-                            >
-                              {salesPercentage}% sold
-                            </Badge>
-                          </div>
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-muted-foreground">
@@ -384,21 +374,22 @@ export function Dashboard({ userType, userProfile, events, userTickets, onCreate
                       </div>
                     </div>
 
-                    <div className="flex gap-2 ml-4">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setSelectedEventForManagement(event)}
-                      >
-                        <Settings className="w-4 h-4 mr-1" />
-                        Manage
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => onViewEvent(event)}>
+                  
+                       <div className="flex gap-2">
+                            <Badge variant={isUpcoming ? 'default' : 'secondary'}>
+                              {isUpcoming ? 'Upcoming' : 'Past'}
+                            </Badge>
+                            <Badge 
+                              variant={salesPercentage < 30 ? 'destructive' : salesPercentage < 70 ? 'secondary' : 'default'}
+                            >
+                              {salesPercentage}% sold
+                            </Badge>
+                            <Button variant="outline" size="sm" onClick={() => setSelectedEvent(event)}>
                         <Eye className="w-4 h-4 mr-1" />
-                        View
+                        View Details
                       </Button>
+                          </div>
                     </div>
-                  </div>
                 </CardContent>
               </Card>
             );
@@ -590,39 +581,17 @@ export function Dashboard({ userType, userProfile, events, userTickets, onCreate
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <QrCode className="w-5 h-5" />
-            Event Check-in Tools
+            Event Check-in Status
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* QR Code Generator */}
-          <div className="border rounded-lg p-6 text-center space-y-4">
-            <div className="w-32 h-32 bg-muted rounded-lg mx-auto flex items-center justify-center">
-              <QrCode className="w-16 h-16 text-muted-foreground" />
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2">Event Check-in QR Code</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Use this QR code for quick attendee check-in at your event venue
-              </p>
-              <div className="flex gap-2 justify-center">
-                <Button variant="outline" size="sm">
-                  <Download className="w-4 h-4 mr-2" />
-                  Download
-                </Button>
-                <Button variant="outline" size="sm">
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Share
-                </Button>
-              </div>
-            </div>
-          </div>
 
-          {/* Check-in Stats */}
+         {/* Check-in Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardContent className="p-4 text-center">
                 <UserCheck className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                <div className="text-2xl font-bold">234</div>
+                <div className="text-2xl font-bold">200</div>
                 <p className="text-sm text-muted-foreground">Checked In</p>
               </CardContent>
             </Card>
@@ -649,16 +618,8 @@ export function Dashboard({ userType, userProfile, events, userTickets, onCreate
             <h3 className="font-semibold">Quick Actions</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Button variant="outline" className="h-20 flex-col gap-2">
-                <QrCode className="w-6 h-6" />
-                Scan QR Code
-              </Button>
-              <Button variant="outline" className="h-20 flex-col gap-2">
-                <Search className="w-6 h-6" />
-                Manual Check-in
-              </Button>
-              <Button variant="outline" className="h-20 flex-col gap-2">
                 <Download className="w-6 h-6" />
-                Export List
+                Export Attendees List
               </Button>
               <Button variant="outline" className="h-20 flex-col gap-2">
                 <RefreshCw className="w-6 h-6" />
@@ -673,35 +634,83 @@ export function Dashboard({ userType, userProfile, events, userTickets, onCreate
 
   // Main Dashboard for Organizers
   const OrganizerDashboard = () => {
-    // If an event is selected for management, show the EventAttendees component
-    if (selectedEventForManagement && userProfile?.accessToken) {
+    // If an event is selected for management, show the check-in and event details
+    if (selectedEvent && userProfile?.accessToken) {
       return (
-        <EventAttendees
-          event={selectedEventForManagement}
+        <div className="space-y-6">
+          <Button
+            variant="outline"
+            onClick={() => setSelectedEvent(null)}
+            className="mb-4"
+          >
+            ← Back to Dashboard
+          </Button>
+          
+          {/* Event Header */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex gap-6">
+                <img 
+                  src={selectedEvent.image_url} 
+                  alt={selectedEvent.title}
+                  className="w-32 h-32 object-cover rounded-lg"
+                />
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold mb-2">{selectedEvent.title}</h2>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <span>{new Date(selectedEvent.date).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-muted-foreground" />
+                      <span>{selectedEvent.time}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-muted-foreground" />
+                      <span>{selectedEvent.location}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-muted-foreground" />
+                      <span>{selectedEvent.attendees}/{selectedEvent.capacity} attendees</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Check-in Content */}
+          <CheckInTab />
+          <EventAttendees
+          event={selectedEvent}
           accessToken={userProfile.accessToken}
           onBack={() => setSelectedEventForManagement(null)}
         />
+        </div>
       );
     }
 
-    // Otherwise show the tabs
+    // Otherwise show the main tabs
     return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="flex w-full h-auto gap-2 p-1 bg-gray-100 rounded-lg">
-          <TabsTrigger value="events" className="flex items-center justify-center gap-2 py-2 px-3 flex-1 rounded-md transition-all font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-200 data-[state=active]:hover:bg-blue-700">
-            <Calendar className="w-4 h-4 flex-shrink-0" />
-            <span className="text-sm">Events</span>
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center justify-center gap-2 py-2 px-3 flex-1 rounded-md transition-all font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-200 data-[state=active]:hover:bg-blue-700">
-            <BarChart3 className="w-4 h-4 flex-shrink-0" />
-            <span className="text-sm">Analytics</span>
-          </TabsTrigger>
-          <TabsTrigger value="checkin" className="flex items-center justify-center gap-2 py-2 px-3 flex-1 rounded-md transition-all font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-200 data-[state=active]:hover:bg-blue-700">
-            <QrCode className="w-4 h-4 flex-shrink-0" />
-            <span className="text-sm">Check-in</span>
-          </TabsTrigger>
-        </TabsList>
+        <TabsTrigger 
+          value="events" 
+          className="flex items-center justify-center gap-2 py-2 px-3 flex-1 rounded-md transition-all font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-200 data-[state=active]:hover:bg-blue-700"
+        >
+          {/* <Calendar className="w-4 h-4 flex-shrink-0" /> */}
+          <span className="text-sm">Events</span>
+        </TabsTrigger>
+        <TabsTrigger 
+          value="analytics" 
+          className="flex items-center justify-center gap-2 py-2 px-3 flex-1 rounded-md transition-all font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-200 data-[state=active]:hover:bg-blue-700"
+        >
+          {/* <BarChart3 className="w-4 h-4 flex-shrink-0" /> */}
+          <span className="text-sm">Analytics</span>
+        </TabsTrigger>
+      </TabsList>
 
         <TabsContent value="events">
           <EventManagementTab />
@@ -709,10 +718,6 @@ export function Dashboard({ userType, userProfile, events, userTickets, onCreate
 
         <TabsContent value="analytics">
           <AnalyticsTab />
-        </TabsContent>
-
-        <TabsContent value="checkin">
-          <CheckInTab />
         </TabsContent>
       </Tabs>
 
