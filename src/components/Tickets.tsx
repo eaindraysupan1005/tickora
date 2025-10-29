@@ -10,14 +10,34 @@ import { QRCodeModal } from './QRCodeModal';
 
 interface TicketsProps {
   events: Event[];
-  userTickets: Array<{ eventId: string; quantity: number; purchaseDate: string }>;
+  userTickets: Array<{
+    id: string;
+    eventId: string;
+    quantity: number;
+    totalPrice: number;
+    status: 'pending' | 'confirmed' | 'cancelled' | 'refunded';
+    buyerInfo: {
+      name: string;
+      email: string;
+      phone: string;
+    };
+    purchaseDate: string;
+  }>;
   onViewEvent: (event: Event) => void;
   onBrowseEvents: () => void;
 }
 
 interface TicketWithEvent {
+  id: string;
   eventId: string;
   quantity: number;
+  totalPrice: number;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'refunded';
+  buyerInfo: {
+    name: string;
+    email: string;
+    phone: string;
+  };
   purchaseDate: string;
   event: Event;
 }

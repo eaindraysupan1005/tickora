@@ -13,7 +13,6 @@ import tickoraLogo from 'figma:asset/3fdeb8fc2454f72234488e708b9894663f874e30.pn
 interface HeaderProps {
   isLoggedIn: boolean;
   userType: 'user' | 'organizer' | null;
-  currentView: 'home' | 'dashboard' | 'tickets' | 'profile' | 'help';
   onLogin: (type: 'user' | 'organizer', email: string, password: string) => Promise<boolean>;
   onSignup: (email: string, password: string, name: string, userType: 'user' | 'organizer') => Promise<boolean>;
   onLogout: () => void;
@@ -189,7 +188,7 @@ function AuthForm({ onLogin, onSignup, onClose }: {
   );
 }
 
-export function Header({ isLoggedIn, userType, currentView, onLogin, onSignup, onLogout, onShowDashboard, onShowHome, onShowTickets, onShowProfile, onShowHelp }: HeaderProps) {
+export function Header({ isLoggedIn, userType, onLogin, onSignup, onLogout, onShowDashboard, onShowHome, onShowTickets, onShowProfile, onShowHelp }: HeaderProps) {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -207,7 +206,7 @@ export function Header({ isLoggedIn, userType, currentView, onLogin, onSignup, o
           <div className="flex items-center space-x-1">
             <Button 
               onClick={onShowHome} 
-              variant={currentView === 'home' ? 'default' : 'ghost'} 
+              variant="ghost" 
               size="sm"
             >
               <Home className="w-4 h-4 mr-2" />
@@ -216,7 +215,7 @@ export function Header({ isLoggedIn, userType, currentView, onLogin, onSignup, o
             {userType === 'user' && (
               <Button 
                 onClick={onShowTickets} 
-                variant={currentView === 'tickets' ? 'default' : 'ghost'} 
+                variant="ghost" 
                 size="sm"
               >
                 <Ticket className="w-4 h-4 mr-2" />
@@ -225,7 +224,7 @@ export function Header({ isLoggedIn, userType, currentView, onLogin, onSignup, o
             )}
             <Button 
               onClick={onShowProfile} 
-              variant={currentView === 'profile' ? 'default' : 'ghost'} 
+              variant="ghost" 
               size="sm"
             >
               <UserCircle className="w-4 h-4 mr-2" />
@@ -233,7 +232,7 @@ export function Header({ isLoggedIn, userType, currentView, onLogin, onSignup, o
             </Button>
             <Button 
               onClick={onShowDashboard} 
-              variant={currentView === 'dashboard' ? 'default' : 'ghost'} 
+              variant="ghost" 
               size="sm"
             >
               <LayoutDashboard className="w-4 h-4 mr-2" />
@@ -241,7 +240,7 @@ export function Header({ isLoggedIn, userType, currentView, onLogin, onSignup, o
             </Button>
             <Button 
               onClick={onShowHelp} 
-              variant={currentView === 'help' ? 'default' : 'ghost'} 
+              variant="ghost" 
               size="sm"
             >
               <HelpCircle className="w-4 h-4 mr-2" />

@@ -48,7 +48,19 @@ interface DashboardProps {
   userType: 'user' | 'organizer';
   userProfile: { id: string; name: string; email: string; userType: string; accessToken: string } | null;
   events: Event[];
-  userTickets: Array<{ eventId: string; quantity: number; purchaseDate: string }>;
+  userTickets: Array<{
+    id: string;
+    eventId: string;
+    quantity: number;
+    totalPrice: number;
+    status: 'pending' | 'confirmed' | 'cancelled' | 'refunded';
+    buyerInfo: {
+      name: string;
+      email: string;
+      phone: string;
+    };
+    purchaseDate: string;
+  }>;
   onCreateEvent: (eventData: any) => void;
   onViewEvent: (event: Event) => void;
 }
@@ -127,20 +139,13 @@ export function Dashboard({ userType, userProfile, events, userTickets, onCreate
     }
   ]);
 
-  // For organizers, we would ideally fetch only their events using getOrganizerEvents
-  // For now, filter events based on organizer_id if available
+  // For organizers, events are already filtered by the backend API (getOrganizerEvents)
+  // This useEffect is no longer needed, but kept for reference
   const organizerEvents = useMemo(() => {
-    if (userType !== 'organizer') return [];
-    
-    // If organizer_id is populated on events, filter by current organizer's ID
-    if (userProfile?.id && events.some(e => e.organizer_id)) {
-      // Note: We'd need to fetch the organizer ID associated with the user
-      // For now, just return all events (organizer dashboard shows all anyway for testing)
-      return events;
-    }
-    
+    // Events passed to Dashboard are already filtered by organizer when user is logged in as organizer
+    // The backend's getOrganizerEvents endpoint returns only events created by the current organizer
     return events;
-  }, [userType, events, userProfile?.id]);
+  }, [events]);
 
   // Filter and search events
   const filteredEvents = useMemo(() => {
