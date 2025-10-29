@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { SearchBar } from './components/SearchBar';
@@ -14,13 +15,13 @@ import { Button } from './components/ui/button';
 import { Badge } from './components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select';
 import { Calendar, MapPin, Search, Sparkles, TrendingUp, Users, Loader2, Home } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { api } from './utils/supabase/client';
 import { ImageWithFallback } from './components/figma/ImageWithFallback';
 import tickoraLogo from 'figma:asset/3fdeb8fc2454f72234488e708b9894663f874e30.png';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'tickets' | 'profile' | 'help'>('home');
+  const navigate = useNavigate();
   const [authState, setAuthState] = useState({
     isLoggedIn: false,
     userType: null as 'user' | 'organizer' | null,
@@ -38,7 +39,19 @@ export default function App() {
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<Event[]>([]);
-  const [userTickets, setUserTickets] = useState<Array<{ eventId: string; quantity: number; purchaseDate: string }>>([]);
+  const [userTickets, setUserTickets] = useState<Array<{
+    id: string;
+    eventId: string;
+    quantity: number;
+    totalPrice: number;
+    status: 'pending' | 'confirmed' | 'cancelled' | 'refunded';
+    buyerInfo: {
+      name: string;
+      email: string;
+      phone: string;
+    };
+    purchaseDate: string;
+  }>>([]);
 
   // Destructure auth state for easier access
   const { isLoggedIn, userType } = authState;
@@ -72,6 +85,88 @@ export default function App() {
     // Simulate loading time
     setTimeout(initializeApp, 1000);
   }, []);
+
+  // Load user tickets and organizer events when user logs in
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (isLoggedIn && userProfile?.accessToken) {
+        try {
+          // Load tickets for all users
+          console.log('Loading user tickets...');
+          const ticketsResponse = await api.getUserTickets(userProfile.accessToken);
+          console.log('Full tickets response:', JSON.stringify(ticketsResponse, null, 2));
+          
+          // Handle different response formats
+          let ticketsList: any[] = [];
+          
+          if (ticketsResponse.tickets && Array.isArray(ticketsResponse.tickets)) {
+            ticketsList = ticketsResponse.tickets;
+            console.log('Tickets from response.tickets:', ticketsList);
+          } else if (Array.isArray(ticketsResponse)) {
+            ticketsList = ticketsResponse;
+            console.log('Tickets from array response:', ticketsList);
+          } else if (ticketsResponse.data && Array.isArray(ticketsResponse.data)) {
+            ticketsList = ticketsResponse.data;
+            console.log('Tickets from response.data:', ticketsList);
+          }
+          
+          // Transform database response to match UI expectations
+          const transformedTickets = ticketsList.map((ticket: any) => ({
+            id: ticket.id,
+            eventId: ticket.event_id,
+            quantity: ticket.quantity,
+            totalPrice: ticket.total_price,
+            status: ticket.status || 'confirmed',
+            buyerInfo: typeof ticket.buyer_info === 'string' 
+              ? JSON.parse(ticket.buyer_info) 
+              : (ticket.buyer_info || { name: '', email: '', phone: '' }),
+            purchaseDate: ticket.purchase_date || new Date().toISOString(),
+          }));
+          
+          console.log('Transformed tickets:', transformedTickets);
+          
+          if (transformedTickets.length > 0) {
+            console.log('Setting user tickets:', transformedTickets);
+            setUserTickets(transformedTickets);
+          } else {
+            console.log('No tickets found');
+            setUserTickets([]);
+          }
+          
+          if (ticketsResponse.error) {
+            console.error('Error loading tickets:', ticketsResponse.error);
+          }
+
+          // Load organizer events if user is an organizer
+          if (userType === 'organizer') {
+            console.log('Loading organizer events...');
+            const orgEventsResponse = await api.getOrganizerEvents(userProfile.accessToken);
+            console.log('Organizer events response:', JSON.stringify(orgEventsResponse, null, 2));
+            
+            let organizerEventsList: any[] = [];
+            
+            if (orgEventsResponse.events && Array.isArray(orgEventsResponse.events)) {
+              organizerEventsList = orgEventsResponse.events;
+              console.log('Events from response.events:', organizerEventsList);
+            } else if (Array.isArray(orgEventsResponse)) {
+              organizerEventsList = orgEventsResponse;
+              console.log('Events from array response:', organizerEventsList);
+            } else if (orgEventsResponse.data && Array.isArray(orgEventsResponse.data)) {
+              organizerEventsList = orgEventsResponse.data;
+              console.log('Events from response.data:', organizerEventsList);
+            }
+            
+            console.log('Setting organizer events:', organizerEventsList);
+            setEvents(organizerEventsList);
+          }
+        } catch (error) {
+          console.error('Failed to load user data:', error);
+        }
+      }
+    };
+
+    loadUserData();
+  }, [isLoggedIn, userProfile?.accessToken, userType]);
 
   // Memoize filtered events to prevent unnecessary recalculations
   const filteredEvents = useMemo(() => {
@@ -232,30 +327,30 @@ export default function App() {
     });
     setUserProfile(null);
     setUserTickets([]);
-    setCurrentView('home');
+    navigate('/');
     toast.success('Signed out successfully');
-  }, []);
+  }, [navigate]);
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
-    setCurrentView('home');
-  }, []);
+    navigate('/');
+  }, [navigate]);
 
   const handleShowHome = useCallback(() => {
-    setCurrentView('home');
-  }, []);
+    navigate('/');
+  }, [navigate]);
 
   const handleShowTickets = useCallback(() => {
-    setCurrentView('tickets');
-  }, []);
+    navigate('/tickets');
+  }, [navigate]);
 
   const handleShowProfile = useCallback(() => {
-    setCurrentView('profile');
-  }, []);
+    navigate('/profile');
+  }, [navigate]);
 
   const handleShowHelp = useCallback(() => {
-    setCurrentView('help');
-  }, []);
+    navigate('/help');
+  }, [navigate]);
 
   const handleViewEvent = useCallback((event: Event) => {
     setSelectedEvent(event);
@@ -274,24 +369,81 @@ export default function App() {
   }, [isLoggedIn, userType]);
 
   const handlePurchaseComplete = useCallback(async (eventId: string, quantity: number, buyerInfo: any, paymentInfo: any) => {
-    // Simulate purchase
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      if (!userProfile?.accessToken) {
+        toast.error('Please log in to purchase tickets');
+        return;
+      }
 
-    // Update event attendees
-    setEvents(prev => prev.map(event => 
-      event.id === eventId 
-        ? { ...event, attendees: Math.min(event.attendees + quantity, event.capacity) }
-        : event
-    ));
+      // Call backend API to purchase tickets
+      const ticketData = {
+        eventId,
+        quantity,
+        buyerInfo: {
+          name: buyerInfo.name,
+          email: buyerInfo.email,
+          phone: buyerInfo.phone,
+        }
+      };
 
-    // Add to user tickets
-    setUserTickets(prev => [
-      ...prev,
-      { eventId, quantity, purchaseDate: new Date().toISOString() }
-    ]);
+      const response = await api.purchaseTickets(ticketData, userProfile.accessToken);
+      
+      if (response.error) {
+        toast.error(response.error || 'Failed to purchase tickets');
+        return;
+      }
 
-    toast.success(`Successfully purchased ${quantity} ticket${quantity > 1 ? 's' : ''}!`);
-  }, []);
+      // Refresh user tickets from backend
+      const ticketsResponse = await api.getUserTickets(userProfile.accessToken);
+      console.log('Purchase: Full tickets response:', JSON.stringify(ticketsResponse, null, 2));
+      
+      // Handle different response formats
+      let ticketsList: any[] = [];
+      
+      if (ticketsResponse.tickets && Array.isArray(ticketsResponse.tickets)) {
+        ticketsList = ticketsResponse.tickets;
+        console.log('Purchase: Tickets from response.tickets:', ticketsList);
+      } else if (Array.isArray(ticketsResponse)) {
+        ticketsList = ticketsResponse;
+        console.log('Purchase: Tickets from array response:', ticketsList);
+      } else if (ticketsResponse.data && Array.isArray(ticketsResponse.data)) {
+        ticketsList = ticketsResponse.data;
+        console.log('Purchase: Tickets from response.data:', ticketsList);
+      }
+      
+      // Transform database response to match UI expectations
+      const transformedTickets = ticketsList.map((ticket: any) => ({
+        id: ticket.id,
+        eventId: ticket.event_id,
+        quantity: ticket.quantity,
+        totalPrice: ticket.total_price,
+        status: ticket.status || 'confirmed',
+        buyerInfo: typeof ticket.buyer_info === 'string' 
+          ? JSON.parse(ticket.buyer_info) 
+          : (ticket.buyer_info || { name: '', email: '', phone: '' }),
+        purchaseDate: ticket.purchase_date || new Date().toISOString(),
+      }));
+      
+      console.log('Purchase: Transformed tickets:', transformedTickets);
+      
+      if (transformedTickets.length > 0) {
+        console.log('Purchase: Setting user tickets:', transformedTickets);
+        setUserTickets(transformedTickets);
+      } else {
+        console.log('Purchase: No tickets found');
+        setUserTickets([]);
+      }
+
+      // Show success popup
+      toast.success(`Successfully purchased ${quantity} ticket${quantity > 1 ? 's' : ''}!`);
+      
+      // Close modal
+      setPurchaseEvent(null);
+    } catch (error) {
+      console.error('Error purchasing tickets:', error);
+      toast.error('Failed to purchase tickets. Please try again.');
+    }
+  }, [userProfile]);
 
   const handleCreateEvent = useCallback(async (eventData: any) => {
     if (!isLoggedIn || userType !== 'organizer') {
@@ -513,11 +665,10 @@ export default function App() {
       <Header
         isLoggedIn={isLoggedIn}
         userType={userType}
-        currentView={currentView}
         onLogin={handleLogin}
         onSignup={handleSignup}
         onLogout={handleLogout}
-        onShowDashboard={() => setCurrentView('dashboard')}
+        onShowDashboard={() => navigate('/dashboard')}
         onShowHome={handleShowHome}
         onShowTickets={handleShowTickets}
         onShowProfile={handleShowProfile}
@@ -525,49 +676,66 @@ export default function App() {
       />
 
       <main>
-        {currentView === 'home' && (
-          isLoggedIn && userType === 'organizer' ? (
-            <OrganizerHome
-              events={events}
-              onCreateEvent={handleCreateEvent}
-              onViewEvent={handleViewEvent}
-              onShowDashboard={() => setCurrentView('dashboard')}
-              accessToken={userProfile?.accessToken}
-            />
-          ) : (
-            <HomeView />
-          )
-        )}
-        {currentView === 'dashboard' && (
-          <Dashboard
-            userType={userType!}
-            userProfile={userProfile}
-            events={events}
-            userTickets={userTickets}
-            onCreateEvent={handleCreateEvent}
-            onViewEvent={handleViewEvent}
+        <Routes>
+          <Route 
+            path="/" 
+            element={
+              isLoggedIn && userType === 'organizer' ? (
+                <OrganizerHome
+                  events={events}
+                  onCreateEvent={handleCreateEvent}
+                  onViewEvent={handleViewEvent}
+                  onShowDashboard={() => navigate('/dashboard')}
+                  accessToken={userProfile?.accessToken}
+                />
+              ) : (
+                <HomeView />
+              )
+            }
           />
-        )}
-        {currentView === 'tickets' && (
-          <Tickets
-            events={events}
-            userTickets={userTickets}
-            onViewEvent={handleViewEvent}
-            onBrowseEvents={handleShowHome}
+          <Route 
+            path="/dashboard" 
+            element={
+              <Dashboard
+                userType={userType!}
+                userProfile={userProfile}
+                events={events}
+                userTickets={userTickets}
+                onCreateEvent={handleCreateEvent}
+                onViewEvent={handleViewEvent}
+              />
+            }
           />
-        )}
-        {currentView === 'profile' && (
-          <Profile
-            userType={userType!}
-            userTickets={userTickets}
-            userProfile={userProfile}
+          <Route 
+            path="/tickets" 
+            element={
+              <Tickets
+                events={events}
+                userTickets={userTickets}
+                onViewEvent={handleViewEvent}
+                onBrowseEvents={handleShowHome}
+              />
+            }
           />
-        )}
-        {currentView === 'help' && (
-          <Help
-            userType={userType!}
+          <Route 
+            path="/profile" 
+            element={
+              <Profile
+                userType={userType!}
+                userTickets={userTickets}
+                userProfile={userProfile}
+              />
+            }
           />
-        )}
+          <Route 
+            path="/help" 
+            element={
+              <Help
+                userType={userType!}
+              />
+            }
+          />
+        </Routes>
       </main>
 
       <Footer />
@@ -586,20 +754,6 @@ export default function App() {
         onClose={() => setPurchaseEvent(null)}
         onPurchaseComplete={handlePurchaseComplete}
       />
-
-      {/* Back to Home Button for non-home views */}
-      {currentView !== 'home' && (
-        <div className="fixed bottom-6 right-6">
-          <Button
-            onClick={() => setCurrentView('home')}
-            size="lg"
-            className="shadow-lg"
-          >
-            <Home className="w-4 h-4 mr-2" />
-            Home
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
