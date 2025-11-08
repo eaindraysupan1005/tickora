@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from './ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Menu, LayoutDashboard, Home, Ticket, UserCircle, HelpCircle } from 'lucide-react';
+import { Menu, LayoutDashboard, Home, Ticket, UserCircle, HelpCircle, AlertCircle } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
+import { Alert, AlertDescription } from './ui/alert';
 import { LanguageSelector } from './LanguageSelector';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import tickoraLogo from 'figma:asset/3fdeb8fc2454f72234488e708b9894663f874e30.png';
@@ -24,17 +26,28 @@ interface HeaderProps {
 }
 
 // Separate AuthForm component to isolate form state
-function AuthForm({ onLogin, onSignup, onClose }: {
+function AuthForm({ onLogin, onSignup, onClose, initialMode = 'signin', onModeChange, showSignupSuccess = false, onSignupSuccess }: {
   onLogin: (type: 'user' | 'organizer', email: string, password: string) => Promise<boolean>;
   onSignup: (email: string, password: string, name: string, userType: 'user' | 'organizer') => Promise<boolean>;
   onClose: () => void;
+  initialMode?: 'signin' | 'signup';
+  onModeChange?: (mode: 'signin' | 'signup') => void;
+  showSignupSuccess?: boolean;
+  onSignupSuccess?: () => void;
 }) {
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>(initialMode);
   const [userType, setUserType] = useState<'user' | 'organizer'>('user');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    setAuthMode(initialMode);
+    setEmail('');
+    setPassword('');
+    setName('');
+  }, [initialMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,7 +86,13 @@ function AuthForm({ onLogin, onSignup, onClose }: {
 
       console.log('Auth success:', success);
       
-      if (success) {
+      if (success && authMode === 'signup') {
+        // After signup, trigger the success callback which will close this dialog and open signin
+        onSignupSuccess?.();
+        setEmail('');
+        setPassword('');
+        setName('');
+      } else if (success) {
         onClose();
         // Reset form
         setEmail('');
@@ -89,7 +108,9 @@ function AuthForm({ onLogin, onSignup, onClose }: {
   };
 
   const toggleMode = () => {
-    setAuthMode(authMode === 'signin' ? 'signup' : 'signin');
+    const nextMode = authMode === 'signin' ? 'signup' : 'signin';
+    setAuthMode(nextMode);
+    onModeChange?.(nextMode);
     setEmail('');
     setPassword('');
     setName('');
@@ -108,6 +129,15 @@ function AuthForm({ onLogin, onSignup, onClose }: {
           }
         </DialogDescription>
       </DialogHeader>
+
+      {showSignupSuccess && authMode === 'signin' && (
+        <Alert className="mb-4 bg-green-50 border-green-200">
+          <AlertCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
+            Sign Up Successful! Please Log In
+          </AlertDescription>
+        </Alert>
+      )}
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <Tabs value={userType} onValueChange={(value: string) => setUserType(value as 'user' | 'organizer')}>
@@ -159,7 +189,7 @@ function AuthForm({ onLogin, onSignup, onClose }: {
           type="submit" 
           className="w-full" 
           disabled={isLoading}
-          onClick={(e) => {
+          onClick={() => {
             console.log('Button clicked!', { authMode, userType, email, password: '***', name });
             // Don't prevent default here, let the form submission handle it
           }}
@@ -189,15 +219,46 @@ function AuthForm({ onLogin, onSignup, onClose }: {
 }
 
 export function Header({ isLoggedIn, userType, onLogin, onSignup, onLogout, onShowDashboard, onShowHome, onShowTickets, onShowProfile, onShowHelp }: HeaderProps) {
+  const location = useLocation();
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authDialogMode, setAuthDialogMode] = useState<'signin' | 'signup'>('signin');
+  const [showSignupSuccess, setShowSignupSuccess] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Close auth dialog when user logs in
   useEffect(() => {
     if (isLoggedIn) {
       setIsAuthOpen(false);
+      setAuthDialogMode('signin');
+      setShowSignupSuccess(false);
     }
   }, [isLoggedIn]);
+
+  const handleAuthDialogChange = (open: boolean) => {
+    setIsAuthOpen(open);
+    if (!open) {
+      setAuthDialogMode('signin');
+      setShowSignupSuccess(false);
+    }
+  };
+
+  const handleSignupSuccess = () => {
+    // Close signup, show success message, and open signin form
+    setAuthDialogMode('signin');
+    setShowSignupSuccess(true);
+  };
+
+  // Helper to check if a route is active
+  const isActive = (path: string) => location.pathname === path;
+
+  // Helper to create active nav button styles
+  const getNavButtonClass = (path: string) => {
+    const isCurrentPath = isActive(path);
+    return `${isCurrentPath 
+      ? 'bg-black text-white ' 
+      : 'bg-white text-black '
+    }`;
+  };
 
   const Navigation = () => (
     <>
@@ -208,6 +269,7 @@ export function Header({ isLoggedIn, userType, onLogin, onSignup, onLogout, onSh
               onClick={onShowHome} 
               variant="ghost" 
               size="sm"
+              className={`${getNavButtonClass('/')} transition-colors`}
             >
               <Home className="w-4 h-4 mr-2" />
               Home
@@ -217,6 +279,7 @@ export function Header({ isLoggedIn, userType, onLogin, onSignup, onLogout, onSh
                 onClick={onShowTickets} 
                 variant="ghost" 
                 size="sm"
+                className={`${getNavButtonClass('/tickets')} transition-colors`}
               >
                 <Ticket className="w-4 h-4 mr-2" />
                 Tickets
@@ -226,6 +289,7 @@ export function Header({ isLoggedIn, userType, onLogin, onSignup, onLogout, onSh
               onClick={onShowProfile} 
               variant="ghost" 
               size="sm"
+              className={`${getNavButtonClass('/profile')} transition-colors`}
             >
               <UserCircle className="w-4 h-4 mr-2" />
               Profile
@@ -234,6 +298,7 @@ export function Header({ isLoggedIn, userType, onLogin, onSignup, onLogout, onSh
               onClick={onShowDashboard} 
               variant="ghost" 
               size="sm"
+              className={`${getNavButtonClass('/dashboard')} transition-colors`}
             >
               <LayoutDashboard className="w-4 h-4 mr-2" />
               Dashboard
@@ -242,6 +307,7 @@ export function Header({ isLoggedIn, userType, onLogin, onSignup, onLogout, onSh
               onClick={onShowHelp} 
               variant="ghost" 
               size="sm"
+              className={`${getNavButtonClass('/help')} transition-colors`}
             >
               <HelpCircle className="w-4 h-4 mr-2" />
               Help
@@ -250,15 +316,24 @@ export function Header({ isLoggedIn, userType, onLogin, onSignup, onLogout, onSh
             <Button onClick={onLogout} variant="outline" size="sm">Logout</Button>
           </div>
         ) : (
-          <Dialog open={isAuthOpen} onOpenChange={setIsAuthOpen}>
-            <DialogTrigger asChild>
-              <Button>Sign In</Button>
-            </DialogTrigger>
+          <Dialog open={isAuthOpen} onOpenChange={handleAuthDialogChange}>
+            <div className="flex items-center space-x-2">
+              <DialogTrigger asChild>
+                <Button onClick={() => setAuthDialogMode('signin')}>Sign In</Button>
+              </DialogTrigger>
+              <DialogTrigger asChild>
+                <Button variant="outline" onClick={() => setAuthDialogMode('signup')}>Sign Up</Button>
+              </DialogTrigger>
+            </div>
             <DialogContent className="sm:max-w-md">
               <AuthForm 
                 onLogin={onLogin}
                 onSignup={onSignup}
                 onClose={() => setIsAuthOpen(false)}
+                initialMode={authDialogMode}
+                onModeChange={setAuthDialogMode}
+                showSignupSuccess={showSignupSuccess && authDialogMode === 'signin'}
+                onSignupSuccess={handleSignupSuccess}
               />
             </DialogContent>
           </Dialog>
@@ -285,25 +360,40 @@ export function Header({ isLoggedIn, userType, onLogin, onSignup, onLogout, onSh
             </SheetHeader>
             <div className="flex flex-col space-y-6 mt-8">
               <div className="flex flex-col space-y-4">
-                <Button onClick={onShowHome} variant="outline" className="w-full">
+                <Button 
+                  onClick={onShowHome} 
+                  className={`w-full ${getNavButtonClass('/')} transition-colors`}
+                >
                   <Home className="w-4 h-4 mr-2" />
                   Home
                 </Button>
                 {userType === 'user' && (
-                  <Button onClick={onShowTickets} variant="outline" className="w-full">
+                  <Button 
+                    onClick={onShowTickets} 
+                    className={`w-full ${getNavButtonClass('/tickets')} transition-colors`}
+                  >
                     <Ticket className="w-4 h-4 mr-2" />
                     Tickets
                   </Button>
                 )}
-                <Button onClick={onShowProfile} variant="outline" className="w-full">
+                <Button 
+                  onClick={onShowProfile} 
+                  className={`w-full ${getNavButtonClass('/profile')} transition-colors`}
+                >
                   <UserCircle className="w-4 h-4 mr-2" />
                   Profile
                 </Button>
-                <Button onClick={onShowDashboard} variant="outline" className="w-full">
+                <Button 
+                  onClick={onShowDashboard} 
+                  className={`w-full ${getNavButtonClass('/dashboard')} transition-colors`}
+                >
                   <LayoutDashboard className="w-4 h-4 mr-2" />
                   Dashboard
                 </Button>
-                <Button onClick={onShowHelp} variant="outline" className="w-full">
+                <Button 
+                  onClick={onShowHelp} 
+                  className={`w-full ${getNavButtonClass('/help')} transition-colors`}
+                >
                   <HelpCircle className="w-4 h-4 mr-2" />
                   Help
                 </Button>
@@ -318,15 +408,24 @@ export function Header({ isLoggedIn, userType, onLogin, onSignup, onLogout, onSh
           </SheetContent>
         </Sheet>
       ) : (
-        <Dialog open={isAuthOpen} onOpenChange={setIsAuthOpen}>
-          <DialogTrigger asChild>
-            <Button>Sign In</Button>
-          </DialogTrigger>
+        <Dialog open={isAuthOpen} onOpenChange={handleAuthDialogChange}>
+          <div className="flex items-center space-x-2">
+            <DialogTrigger asChild>
+              <Button size="sm" onClick={() => setAuthDialogMode('signin')}>Sign In</Button>
+            </DialogTrigger>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline" onClick={() => setAuthDialogMode('signup')}>Sign Up</Button>
+            </DialogTrigger>
+          </div>
           <DialogContent className="sm:max-w-md">
             <AuthForm 
               onLogin={onLogin}
               onSignup={onSignup}
               onClose={() => setIsAuthOpen(false)}
+              initialMode={authDialogMode}
+              onModeChange={setAuthDialogMode}
+              showSignupSuccess={showSignupSuccess && authDialogMode === 'signin'}
+              onSignupSuccess={handleSignupSuccess}
             />
           </DialogContent>
         </Dialog>

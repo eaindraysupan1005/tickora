@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect, ChangeEvent } from 'react';
+import { useState, useCallback, useEffect, ChangeEvent, MouseEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../utils/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -10,6 +11,24 @@ import { Separator } from './ui/separator';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from './ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { 
   User, 
@@ -49,6 +68,7 @@ interface ProfileProps {
     userType: string;
     accessToken: string;
   } | null;
+  onDeleteAccount?: () => void;
 }
 
 interface UserProfile {
@@ -62,7 +82,6 @@ interface UserProfile {
   preferences: {
     emailNotifications: boolean;
     smsNotifications: boolean;
-    marketingEmails: boolean;
     eventReminders: boolean;
   };
 }
@@ -171,10 +190,14 @@ const ProfileFormComponent = ({ data, onChange, readonly = false, userType }: Pr
   </div>
 );
 
-export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
+export function Profile({ userType, userTickets, userProfile, onDeleteAccount }: ProfileProps) {
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
   
   // Use real user data if available, otherwise fall back to sample data
   const defaultName = userProfile?.name || (userType === 'organizer' ? 'Sarah Johnson' : 'John Doe');
@@ -193,7 +216,6 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
     preferences: {
       emailNotifications: true,
       smsNotifications: false,
-      marketingEmails: true,
       eventReminders: true,
     }
   });
@@ -258,7 +280,6 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
             preferences: fetchedProfile.preferences || {
               emailNotifications: true,
               smsNotifications: false,
-              marketingEmails: true,
               eventReminders: true,
             },
           };
@@ -337,6 +358,46 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
     setEditProfile(userType === 'organizer' ? organizerProfile : profile);
     setIsEditing(false);
   };
+
+  const handleDeleteAccount = useCallback(async (): Promise<boolean> => {
+    const accessToken = userProfile?.accessToken;
+
+    if (!accessToken) {
+      toast.error('No access token available. Please log in again.');
+      return false;
+    }
+
+    try {
+      setIsDeleting(true);
+      const response = await api.deleteAccount(accessToken);
+
+      if (!response || response.error) {
+        toast.error(response?.error || 'Failed to delete account');
+        return false;
+      }
+
+      // Show success popup
+      setShowDeleteSuccess(true);
+      setDeleteDialogOpen(false);
+
+      // Auto-dismiss after 5 seconds and navigate to home
+      setTimeout(() => {
+        setShowDeleteSuccess(false);
+        if (onDeleteAccount) {
+          onDeleteAccount();
+        }
+        navigate('/');
+      }, 5000);
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      toast.error('Failed to delete account');
+      return false;
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [onDeleteAccount, userProfile?.accessToken, navigate]);
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -911,6 +972,51 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
                 </div>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                  <AlertCircle className="w-5 h-5" />
+                  Delete Account
+                </CardTitle>
+                <CardDescription>
+                  Permanently remove your account and associated data. This action cannot be undone.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" disabled={isDeleting}>
+                      Delete Account
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete account?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently remove your profile, tickets, and event history. You cannot undo this action.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        disabled={isDeleting}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        onClick={async (event: MouseEvent<HTMLButtonElement>) => {
+                          event.preventDefault();
+                          const success = await handleDeleteAccount();
+                          if (success) {
+                            setDeleteDialogOpen(false);
+                          }
+                        }}
+                      >
+                        {isDeleting ? 'Deleting…' : 'Delete'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="notifications" className="space-y-6">
@@ -977,21 +1083,7 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
 
                   <Separator />
 
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-medium">Marketing Emails</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Receive newsletters and promotional offers
-                      </p>
-                    </div>
-                    <Switch
-                      checked={isEditing ? editProfile.preferences.marketingEmails : currentProfile.preferences.marketingEmails}
-                      onCheckedChange={(checked: any) => updatePreference('marketingEmails', checked)}
-                    />
-                  </div>
+                 
                 </div>
               </CardContent>
             </Card>
@@ -1009,6 +1101,26 @@ export function Profile({ userType, userTickets, userProfile }: ProfileProps) {
             </>
           )}
         </Tabs>
+
+        {/* Success Popup for Account Deletion */}
+        <Dialog open={showDeleteSuccess} onOpenChange={setShowDeleteSuccess}>
+          <DialogContent className="sm:max-w-md" showCloseButton={false}>
+            <DialogHeader>
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+              </div>
+              <DialogTitle className="text-center text-xl">Account Deleted Successfully</DialogTitle>
+              <DialogDescription className="text-center">
+                Your account and all associated data have been permanently removed.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-center">
+              <p className="text-sm text-muted-foreground">Redirecting to home in a few seconds...</p>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

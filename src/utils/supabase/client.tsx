@@ -56,6 +56,16 @@ export const api = {
     return response.json()
   },
 
+  deleteAccount: async (accessToken: string) => {
+    const response = await fetch(`${serverUrl}/profile`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      }
+    })
+    return response.json()
+  },
+
   // Event endpoints
   getEvents: async () => {
     const response = await fetch(`${serverUrl}/events`, {
