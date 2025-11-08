@@ -21,19 +21,57 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 )
 
+// Get the anon key - try multiple possible env var names
+const getAnonKey = () => {
+  return Deno.env.get('SUPABASE_ANON_KEY') || 
+         Deno.env.get('SUPABASE_PUBLIC_ANON_KEY') ||
+         Deno.env.get('VITE_SUPABASE_ANON_KEY') ||
+         // Fallback: use service role key for token validation
+         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+}
+
+// Create a separate client for token validation
+const anonClient = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  getAnonKey(),
+)
+
+console.log('Supabase initialized with URL:', Deno.env.get('SUPABASE_URL'));
+console.log('Anom key available:', !!getAnonKey());
+
 // Auth helper function
 async function getAuthenticatedUser(request: Request) {
-  const accessToken = request.headers.get('Authorization')?.split(' ')[1];
-  if (!accessToken) {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader) {
+    console.log('No authorization header');
     return null;
   }
   
-  const { data: { user }, error } = await supabase.auth.getUser(accessToken);
-  if (error || !user) {
+  const parts = authHeader.split(' ');
+  if (parts.length !== 2 || parts[0] !== 'Bearer') {
+    console.log('Invalid authorization header format');
     return null;
   }
   
-  return user;
+  const accessToken = parts[1];
+  
+  try {
+    // Use anonClient for token validation with the access token
+    const { data: { user }, error } = await anonClient.auth.getUser(accessToken);
+    if (error) {
+      console.log('Auth error:', error.message);
+      return null;
+    }
+    if (!user) {
+      console.log('No user in auth response');
+      return null;
+    }
+    console.log('User authenticated:', user.id);
+    return user;
+  } catch (err) {
+    console.log('Exception getting user:', err);
+    return null;
+  }
 }
 
 // ============================================
@@ -47,6 +85,30 @@ app.post('/make-server-f69ab98e/signup', async (c) => {
     
     if (!email || !password || !name || !userType) {
       return c.json({ error: 'Missing required fields' }, 400)
+    }
+
+    // Check if auth user exists for this email and remove if database record is gone
+    try {
+      const { data: { users } } = await supabase.auth.admin.listUsers()
+      const authUser = users?.find((u: any) => u.email === email)
+      
+      if (authUser) {
+        // Check if database user still exists
+        const { data: dbUser } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', email)
+          .single()
+        
+        // If no DB user but auth user exists, clean up the auth record
+        if (!dbUser && authUser.id) {
+          await supabase.auth.admin.deleteUser(authUser.id)
+          console.log('Cleaned up stale auth user for email:', email)
+        }
+      }
+    } catch (checkError) {
+      console.log('Info: Could not check for existing auth user:', checkError)
+      // Continue with signup attempt anyway
     }
 
     // Create user with Supabase Auth
@@ -80,8 +142,32 @@ app.post('/make-server-f69ab98e/signup', async (c) => {
         })
       }
 
+      // Generate session for new user by signing them in
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+
+      if (signInError) {
+        console.log('Sign-in after signup failed:', signInError.message)
+        // If sign-in fails but user was created, we need an alternative approach
+        // For now, return an error asking them to log in manually
+        return c.json({ 
+          error: 'Account created successfully. Please log in with your credentials.' 
+        }, 201)
+      }
+
+      if (!signInData.session) {
+        console.log('No session returned from sign-in')
+        return c.json({ 
+          error: 'Account created but could not generate session. Please log in.' 
+        }, 201)
+      }
+
       return c.json({ 
-        user,
+        user: data.user,
+        session: signInData.session,
+        profile: user,
         message: 'User created successfully' 
       })
     } catch (dbError) {
@@ -207,6 +293,33 @@ app.put('/make-server-f69ab98e/profile', async (c) => {
   } catch (error) {
     console.log('Error updating profile:', error);
     return c.json({ error: 'Internal server error', details: error }, 500);
+  }
+});
+
+// Delete user account
+app.delete('/make-server-f69ab98e/profile', async (c) => {
+  try {
+    const user = await getAuthenticatedUser(c.req.raw);
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const deleteResult = await db.deleteUserAccount(user.id);
+
+    if (!deleteResult?.userId) {
+      return c.json({ error: 'Account not found' }, 404);
+    }
+
+    const { error: authDeleteError } = await supabase.auth.admin.deleteUser(user.id);
+    if (authDeleteError) {
+      console.log('Error deleting auth user:', authDeleteError);
+      return c.json({ error: 'Failed to remove authentication record' }, 500);
+    }
+
+    return c.json({ message: 'Account deleted successfully' });
+  } catch (error) {
+    console.log('Error deleting account:', error);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 

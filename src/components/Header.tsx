@@ -24,17 +24,26 @@ interface HeaderProps {
 }
 
 // Separate AuthForm component to isolate form state
-function AuthForm({ onLogin, onSignup, onClose }: {
+function AuthForm({ onLogin, onSignup, onClose, initialMode = 'signin', onModeChange }: {
   onLogin: (type: 'user' | 'organizer', email: string, password: string) => Promise<boolean>;
   onSignup: (email: string, password: string, name: string, userType: 'user' | 'organizer') => Promise<boolean>;
   onClose: () => void;
+  initialMode?: 'signin' | 'signup';
+  onModeChange?: (mode: 'signin' | 'signup') => void;
 }) {
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>(initialMode);
   const [userType, setUserType] = useState<'user' | 'organizer'>('user');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    setAuthMode(initialMode);
+    setEmail('');
+    setPassword('');
+    setName('');
+  }, [initialMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,7 +98,9 @@ function AuthForm({ onLogin, onSignup, onClose }: {
   };
 
   const toggleMode = () => {
-    setAuthMode(authMode === 'signin' ? 'signup' : 'signin');
+    const nextMode = authMode === 'signin' ? 'signup' : 'signin';
+    setAuthMode(nextMode);
+    onModeChange?.(nextMode);
     setEmail('');
     setPassword('');
     setName('');
@@ -159,7 +170,7 @@ function AuthForm({ onLogin, onSignup, onClose }: {
           type="submit" 
           className="w-full" 
           disabled={isLoading}
-          onClick={(e) => {
+          onClick={() => {
             console.log('Button clicked!', { authMode, userType, email, password: '***', name });
             // Don't prevent default here, let the form submission handle it
           }}
@@ -190,14 +201,23 @@ function AuthForm({ onLogin, onSignup, onClose }: {
 
 export function Header({ isLoggedIn, userType, onLogin, onSignup, onLogout, onShowDashboard, onShowHome, onShowTickets, onShowProfile, onShowHelp }: HeaderProps) {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authDialogMode, setAuthDialogMode] = useState<'signin' | 'signup'>('signin');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Close auth dialog when user logs in
   useEffect(() => {
     if (isLoggedIn) {
       setIsAuthOpen(false);
+      setAuthDialogMode('signin');
     }
   }, [isLoggedIn]);
+
+  const handleAuthDialogChange = (open: boolean) => {
+    setIsAuthOpen(open);
+    if (!open) {
+      setAuthDialogMode('signin');
+    }
+  };
 
   const Navigation = () => (
     <>
@@ -250,15 +270,22 @@ export function Header({ isLoggedIn, userType, onLogin, onSignup, onLogout, onSh
             <Button onClick={onLogout} variant="outline" size="sm">Logout</Button>
           </div>
         ) : (
-          <Dialog open={isAuthOpen} onOpenChange={setIsAuthOpen}>
-            <DialogTrigger asChild>
-              <Button>Sign In</Button>
-            </DialogTrigger>
+          <Dialog open={isAuthOpen} onOpenChange={handleAuthDialogChange}>
+            <div className="flex items-center space-x-2">
+              <DialogTrigger asChild>
+                <Button onClick={() => setAuthDialogMode('signin')}>Sign In</Button>
+              </DialogTrigger>
+              <DialogTrigger asChild>
+                <Button variant="outline" onClick={() => setAuthDialogMode('signup')}>Sign Up</Button>
+              </DialogTrigger>
+            </div>
             <DialogContent className="sm:max-w-md">
               <AuthForm 
                 onLogin={onLogin}
                 onSignup={onSignup}
                 onClose={() => setIsAuthOpen(false)}
+                initialMode={authDialogMode}
+                onModeChange={setAuthDialogMode}
               />
             </DialogContent>
           </Dialog>
@@ -318,15 +345,22 @@ export function Header({ isLoggedIn, userType, onLogin, onSignup, onLogout, onSh
           </SheetContent>
         </Sheet>
       ) : (
-        <Dialog open={isAuthOpen} onOpenChange={setIsAuthOpen}>
-          <DialogTrigger asChild>
-            <Button>Sign In</Button>
-          </DialogTrigger>
+        <Dialog open={isAuthOpen} onOpenChange={handleAuthDialogChange}>
+          <div className="flex items-center space-x-2">
+            <DialogTrigger asChild>
+              <Button size="sm" onClick={() => setAuthDialogMode('signin')}>Sign In</Button>
+            </DialogTrigger>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline" onClick={() => setAuthDialogMode('signup')}>Sign Up</Button>
+            </DialogTrigger>
+          </div>
           <DialogContent className="sm:max-w-md">
             <AuthForm 
               onLogin={onLogin}
               onSignup={onSignup}
               onClose={() => setIsAuthOpen(false)}
+              initialMode={authDialogMode}
+              onModeChange={setAuthDialogMode}
             />
           </DialogContent>
         </Dialog>

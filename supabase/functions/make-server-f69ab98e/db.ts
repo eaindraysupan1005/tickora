@@ -80,6 +80,48 @@ export async function updateUser(userId: string, updates: any) {
   return data
 }
 
+export async function deleteUserAccount(authId: string) {
+  const supabase = createDBClient()
+
+  const { data: userRecord, error: fetchError } = await supabase
+    .from('users')
+    .select('id')
+    .eq('auth_id', authId)
+    .single()
+
+  if (fetchError) {
+    if (fetchError.code === 'PGRST116') {
+      return { userId: null }
+    }
+    throw new Error(`Failed to load user for deletion: ${fetchError.message}`)
+  }
+
+  if (!userRecord?.id) {
+    return { userId: null }
+  }
+
+  // Remove related cached profile data from KV store if present
+  const { error: kvError } = await supabase
+    .from('kv_store_f69ab98e')
+    .delete()
+    .eq('key', `user:${authId}`)
+
+  if (kvError && kvError.code !== 'PGRST116') {
+    console.log('Warning deleting KV user cache:', kvError)
+  }
+
+  const { error: deleteError } = await supabase
+    .from('users')
+    .delete()
+    .eq('id', userRecord.id)
+
+  if (deleteError) {
+    throw new Error(`Failed to delete user: ${deleteError.message}`)
+  }
+
+  return { userId: userRecord.id }
+}
+
 // ============================================
 // ORGANIZER FUNCTIONS
 // ============================================

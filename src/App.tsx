@@ -205,6 +205,13 @@ export default function App() {
         return false;
       }
       
+      // Ensure we have a valid access token
+      if (!result.session?.access_token) {
+        console.error('No access token in login response:', result);
+        toast.error('Failed to get session token');
+        return false;
+      }
+      
       setAuthState({
         isLoggedIn: true,
         userType: type,
@@ -216,43 +223,21 @@ export default function App() {
           name: result.profile.name,
           email: result.profile.email,
           userType: userType as 'user' | 'organizer',
-          accessToken: result.session?.access_token || 'temp-token'
+          accessToken: result.session.access_token
         });
         
         toast.success(`Welcome back, ${result.profile.name}!`);
       } else {
-        // Temporary fallback for development
-        setUserProfile({
-          id: 'temp-id',
-          name: email.split('@')[0],
-          email: email,
-          userType: type,
-          accessToken: 'temp-token'
-        });
-        
-        toast.success(`Welcome back!`);
+        console.error('No profile in login response');
+        toast.error('User profile not found');
+        return false;
       }
       
       return true;
     } catch (error) {
       console.error('Login error:', error);
-      
-      // Temporary fallback for development - allow login with any credentials
-      setAuthState({
-        isLoggedIn: true,
-        userType: type,
-      });
-      
-      setUserProfile({
-        id: 'temp-id',
-        name: email.split('@')[0],
-        email: email,
-        userType: type,
-        accessToken: 'temp-token'
-      });
-      
-      toast.success(`Signed in as ${type === 'organizer' ? 'Event Organizer' : 'Event Attendee'} (Development Mode)`);
-      return true;
+      toast.error('Login failed. Please try again.');
+      return false;
     }
   }, []);
 
@@ -265,7 +250,22 @@ export default function App() {
       
       if (result.error) {
         toast.error(result.error);
+        
+        // If error mentions "successfully" or 201, account was created but auto-login failed
+        if (result.error.includes('successfully') || result.error.includes('created')) {
+          toast.info('Please log in with your new credentials');
+          // Return true to close signup dialog, but don't set user as logged in
+          return true;
+        }
         return false;
+      }
+      
+      // Ensure we have a valid session with access token
+      if (!result.session?.access_token) {
+        console.error('No session/access_token in signup response:', result);
+        // Account was created, but auto-login failed
+        toast.success(`Account created, ${name}! Please log in with your credentials.`);
+        return true; // Close the dialog
       }
       
       // Set auth state to log the user in after successful signup
@@ -280,43 +280,21 @@ export default function App() {
           name: name,
           email: email,
           userType: userType,
-          accessToken: result.user.id // Note: In real implementation, we'd get access token from auth
+          accessToken: result.session.access_token
         });
         
         toast.success(`Welcome to Tickora, ${name}! Your account has been created successfully.`);
       } else {
-        // Temporary fallback for development
-        setUserProfile({
-          id: 'temp-id-' + Date.now(),
-          name: name,
-          email: email,
-          userType: userType,
-          accessToken: 'temp-token'
-        });
-        
-        toast.success(`Welcome to Tickora, ${name}! Account created in development mode.`);
+        console.error('No user object in signup response');
+        toast.error('Account created but could not log in');
+        return true; // Close the dialog
       }
       
       return true;
     } catch (error) {
       console.error('Signup error:', error);
-      
-      // Temporary fallback for development - allow signup with any data
-      setAuthState({
-        isLoggedIn: true,
-        userType: userType,
-      });
-      
-      setUserProfile({
-        id: 'temp-id-' + Date.now(),
-        name: name,
-        email: email,
-        userType: userType,
-        accessToken: 'temp-token'
-      });
-      
-      toast.success(`Welcome to Tickora, ${name}! Account created in development mode.`);
-      return true;
+      toast.error('Signup failed. Please try again.');
+      return false;
     }
   }, []);
 
@@ -528,7 +506,7 @@ export default function App() {
   const StatsSection = () => (
     <section className="py-16 bg-muted/30">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-center">
           <div className="space-y-2">
             <div className="flex items-center justify-center text-primary mb-2">
               <Calendar className="w-8 h-8" />
@@ -552,13 +530,7 @@ export default function App() {
             <div className="text-3xl font-bold">15+</div>
             <p className="text-muted-foreground">Cities Covered</p>
           </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-center text-primary mb-2">
-              <TrendingUp className="w-8 h-8" />
-            </div>
-            <div className="text-3xl font-bold">98%</div>
-            <p className="text-muted-foreground">Satisfaction Rate</p>
-          </div>
+         
         </div>
       </div>
     </section>
@@ -724,6 +696,7 @@ export default function App() {
                 userType={userType!}
                 userTickets={userTickets}
                 userProfile={userProfile}
+                onDeleteAccount={handleLogout}
               />
             }
           />
