@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, ChangeEvent, MouseEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../utils/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -21,6 +22,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from './ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { 
   User, 
@@ -183,11 +191,13 @@ const ProfileFormComponent = ({ data, onChange, readonly = false, userType }: Pr
 );
 
 export function Profile({ userType, userTickets, userProfile, onDeleteAccount }: ProfileProps) {
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
   
   // Use real user data if available, otherwise fall back to sample data
   const defaultName = userProfile?.name || (userType === 'organizer' ? 'Sarah Johnson' : 'John Doe');
@@ -366,10 +376,19 @@ export function Profile({ userType, userTickets, userProfile, onDeleteAccount }:
         return false;
       }
 
-      toast.success('Your account has been deleted.');
-      if (onDeleteAccount) {
-        onDeleteAccount();
-      }
+      // Show success popup
+      setShowDeleteSuccess(true);
+      setDeleteDialogOpen(false);
+
+      // Auto-dismiss after 5 seconds and navigate to home
+      setTimeout(() => {
+        setShowDeleteSuccess(false);
+        if (onDeleteAccount) {
+          onDeleteAccount();
+        }
+        navigate('/');
+      }, 5000);
+
       return true;
     } catch (error) {
       console.error('Error deleting account:', error);
@@ -378,7 +397,7 @@ export function Profile({ userType, userTickets, userProfile, onDeleteAccount }:
     } finally {
       setIsDeleting(false);
     }
-  }, [onDeleteAccount, userProfile?.accessToken]);
+  }, [onDeleteAccount, userProfile?.accessToken, navigate]);
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -1082,6 +1101,26 @@ export function Profile({ userType, userTickets, userProfile, onDeleteAccount }:
             </>
           )}
         </Tabs>
+
+        {/* Success Popup for Account Deletion */}
+        <Dialog open={showDeleteSuccess} onOpenChange={setShowDeleteSuccess}>
+          <DialogContent className="sm:max-w-md" showCloseButton={false}>
+            <DialogHeader>
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+              </div>
+              <DialogTitle className="text-center text-xl">Account Deleted Successfully</DialogTitle>
+              <DialogDescription className="text-center">
+                Your account and all associated data have been permanently removed.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-center">
+              <p className="text-sm text-muted-foreground">Redirecting to home in a few seconds...</p>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
