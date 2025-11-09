@@ -695,20 +695,18 @@ export function Dashboard({ userType, userProfile, events, userTickets, onCreate
     return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="flex w-full h-auto gap-2 p-1 bg-gray-100 rounded-lg">
+        <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger 
-          value="events" 
-          className="flex items-center justify-center gap-2 py-2 px-3 flex-1 rounded-md transition-all font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-200 data-[state=active]:hover:bg-blue-700"
+          value="events"
+          className="flex items-center justify-center gap-2"
         >
-          {/* <Calendar className="w-4 h-4 flex-shrink-0" /> */}
-          <span className="text-sm">Events</span>
+          <span>Events</span>
         </TabsTrigger>
         <TabsTrigger 
-          value="analytics" 
-          className="flex items-center justify-center gap-2 py-2 px-3 flex-1 rounded-md transition-all font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-200 data-[state=active]:hover:bg-blue-700"
+          value="analytics"
+          className="flex items-center justify-center gap-2"
         >
-          {/* <BarChart3 className="w-4 h-4 flex-shrink-0" /> */}
-          <span className="text-sm">Analytics</span>
+          <span>Analytics</span>
         </TabsTrigger>
       </TabsList>
 

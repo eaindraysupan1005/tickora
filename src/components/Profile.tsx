@@ -632,74 +632,6 @@ export function Profile({ userType, userTickets, userProfile, onDeleteAccount }:
     </div>
   );
 
-  const BusinessDetailsTab = () => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Building className="w-5 h-5" />
-          Business Information
-        </CardTitle>
-        <CardDescription>
-          Legal and business details for your organization
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="businessType">Business Type</Label>
-            <Select 
-              value={organizerProfile.businessDetails.businessType}
-              onValueChange={(value: any) => setOrganizerProfile((prev: any) => ({
-                ...prev,
-                businessDetails: { ...prev.businessDetails, businessType: value }
-              }))}
-              disabled={!isEditing}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select business type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="LLC">Limited Liability Company (LLC)</SelectItem>
-                <SelectItem value="Corp">Corporation</SelectItem>
-                <SelectItem value="Partnership">Partnership</SelectItem>
-                <SelectItem value="Sole Proprietorship">Sole Proprietorship</SelectItem>
-                <SelectItem value="Non-profit">Non-profit Organization</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="taxId">Tax ID / EIN</Label>
-            <Input
-              id="taxId"
-              value={organizerProfile.businessDetails.taxId}
-              onChange={(e: any) => setOrganizerProfile((prev: any) => ({
-                ...prev,
-                businessDetails: { ...prev.businessDetails, taxId: e.target.value }
-              }))}
-              disabled={!isEditing}
-              placeholder="12-3456789"
-            />
-          </div>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="businessAddress">Business Address</Label>
-          <Textarea
-            id="businessAddress"
-            value={organizerProfile.businessDetails.businessAddress}
-            onChange={(e: any) => setOrganizerProfile((prev: any) => ({
-              ...prev,
-              businessDetails: { ...prev.businessDetails, businessAddress: e.target.value }
-            }))}
-            disabled={!isEditing}
-            rows={3}
-            placeholder="Enter your business address"
-          />
-        </div>
-      </CardContent>
-    </Card>
-  );
-
   const PaymentSettingsTab = () => (
     <div className="space-y-6">
       <Card>
@@ -879,7 +811,7 @@ export function Profile({ userType, userTickets, userProfile, onDeleteAccount }:
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={`grid w-full ${userType === 'organizer' ? 'grid-cols-4' : 'grid-cols-2'}`}>
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-3">
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="w-4 h-4" />
               Profile
@@ -889,16 +821,10 @@ export function Profile({ userType, userTickets, userProfile, onDeleteAccount }:
               Notifications
             </TabsTrigger>
             {userType === 'organizer' && (
-              <>
-                <TabsTrigger value="business" className="flex items-center gap-2">
-                  <Building className="w-4 h-4" />
-                  Business
-                </TabsTrigger>
-                <TabsTrigger value="payments" className="flex items-center gap-2">
-                  <CreditCard className="w-4 h-4" />
-                  Payments
-                </TabsTrigger>
-              </>
+              <TabsTrigger value="payments" className="flex items-center gap-2">
+                <CreditCard className="w-4 h-4" />
+                Payments
+              </TabsTrigger>
             )}
           </TabsList>
 
@@ -944,6 +870,75 @@ export function Profile({ userType, userTickets, userProfile, onDeleteAccount }:
               </CardContent>
             </Card>
 
+                   {/* Business Details Card for Organizers */}
+            {userType === 'organizer' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building className="w-5 h-5" />
+                    Business Information
+                  </CardTitle>
+                  <CardDescription>
+                    Legal and business details for your organization
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="businessType">Business Type</Label>
+                      <Select 
+                        value={organizerProfile.businessDetails.businessType}
+                        onValueChange={(value: any) => setOrganizerProfile((prev: any) => ({
+                          ...prev,
+                          businessDetails: { ...prev.businessDetails, businessType: value }
+                        }))}
+                        disabled={!isEditing}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select business type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="LLC">Limited Liability Company (LLC)</SelectItem>
+                          <SelectItem value="Corp">Corporation</SelectItem>
+                          <SelectItem value="Partnership">Partnership</SelectItem>
+                          <SelectItem value="Sole Proprietorship">Sole Proprietorship</SelectItem>
+                          <SelectItem value="Non-profit">Non-profit Organization</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="taxId">Tax ID / EIN</Label>
+                      <Input
+                        id="taxId"
+                        value={organizerProfile.businessDetails.taxId}
+                        onChange={(e: any) => setOrganizerProfile((prev: any) => ({
+                          ...prev,
+                          businessDetails: { ...prev.businessDetails, taxId: e.target.value }
+                        }))}
+                        disabled={!isEditing}
+                        placeholder="12-3456789"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="businessAddress">Business Address</Label>
+                    <Textarea
+                      id="businessAddress"
+                      value={organizerProfile.businessDetails.businessAddress}
+                      onChange={(e: any) => setOrganizerProfile((prev: any) => ({
+                        ...prev,
+                        businessDetails: { ...prev.businessDetails, businessAddress: e.target.value }
+                      }))}
+                      disabled={!isEditing}
+                      rows={3}
+                      placeholder="Enter your business address"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
             <Card>
               <CardHeader>
                 <CardTitle>Account Information</CardTitle>
@@ -1017,6 +1012,8 @@ export function Profile({ userType, userTickets, userProfile, onDeleteAccount }:
                 </AlertDialog>
               </CardContent>
             </Card>
+
+           
           </TabsContent>
 
           <TabsContent value="notifications" className="space-y-6">
@@ -1090,15 +1087,9 @@ export function Profile({ userType, userTickets, userProfile, onDeleteAccount }:
           </TabsContent>
 
           {userType === 'organizer' && (
-            <>
-              <TabsContent value="business" className="space-y-6">
-                <BusinessDetailsTab />
-              </TabsContent>
-
-              <TabsContent value="payments" className="space-y-6">
-                <PaymentSettingsTab />
-              </TabsContent>
-            </>
+            <TabsContent value="payments" className="space-y-6">
+              <PaymentSettingsTab />
+            </TabsContent>
           )}
         </Tabs>
 

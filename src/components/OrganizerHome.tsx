@@ -92,17 +92,6 @@ export function OrganizerHome({ events, onCreateEvent, onViewEvent, onShowDashbo
       });
     }
 
-    // Mock: Refund requests (randomly show some)
-    const mockRefundRequests = Math.floor(Math.random() * 3);
-    if (mockRefundRequests > 0) {
-      alerts.push({
-        type: 'destructive' as const,
-        title: 'Refund Requests',
-        message: `${mockRefundRequests} pending refund request${mockRefundRequests > 1 ? 's' : ''} need review`,
-        count: mockRefundRequests
-      });
-    }
-
     return alerts;
   }, [organizerEvents]);
 
