@@ -170,9 +170,14 @@ export default function App() {
 
   // Memoize filtered events to prevent unnecessary recalculations
   const filteredEvents = useMemo(() => {
+    const now = new Date();
     return events.filter(event => {
       // Safety check for event object
       if (!event) return false;
+      
+      // Filter out past events - only show upcoming events
+      const eventDate = new Date(event.date);
+      if (eventDate < now) return false;
       
       const matchesSearch = searchQuery === '' || 
         (event.title && event.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
