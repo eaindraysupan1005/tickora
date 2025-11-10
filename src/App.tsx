@@ -68,7 +68,13 @@ export default function App() {
         // Get events from server
         const result = await api.getEvents();
         if (result.events) {
-          setEvents(result.events);
+          // Transform events to match Event interface
+          const transformedEvents = result.events.map((event: any) => ({
+            ...event,
+            organizer: event.organizers?.organization_name || 'Unknown Organization',
+            organizer_id: event.organizer_id
+          }));
+          setEvents(transformedEvents);
         } else {
           // No events available
           setEvents([]);
@@ -434,25 +440,8 @@ export default function App() {
       return;
     }
 
-    // Simulate event creation
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    const newEvent: Event = {
-      id: `event-${Date.now()}`,
-      title: eventData.title,
-      description: eventData.description,
-      date: eventData.date,
-      time: eventData.time,
-      location: eventData.location,
-      price: eventData.price,
-      capacity: eventData.capacity,
-      attendees: 0,
-      category: eventData.category,
-      image_url: eventData.image_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&h=400&fit=crop',
-      organizer: 'Your Organization'
-    };
-
-    setEvents(prev => [newEvent, ...prev]);
+    // Add the event to the local state (it was already saved to database by CreateEventModal)
+    setEvents(prev => [eventData, ...prev]);
     toast.success('Event created successfully!');
   }, [isLoggedIn, userType]);
 
