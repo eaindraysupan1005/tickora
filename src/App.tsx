@@ -8,6 +8,7 @@ import { EventModal } from './components/EventModal';
 import { TicketPurchaseModal } from './components/TicketPurchaseModal';
 import { Dashboard } from './components/Dashboard';
 import { Tickets } from './components/Tickets';
+import { TicketVerification } from './components/TicketVerification';
 import { Profile } from './components/Profile';
 import { Help } from './components/Help';
 import { OrganizerHome } from './components/OrganizerHome';
@@ -701,6 +702,10 @@ export default function App() {
                 userType={userType!}
               />
             }
+          />
+          <Route
+            path="/verify-ticket"
+            element={<TicketVerification />}
           />
         </Routes>
       </main>

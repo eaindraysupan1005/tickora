@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
-import { Calendar, MapPin, Clock, Ticket, QrCode, Download, Star, AlertCircle } from 'lucide-react';
+import { Calendar, MapPin, Clock, Ticket, QrCode, Star, AlertCircle } from 'lucide-react';
 import { Event } from './EventCard';
 import { QRCodeModal } from './QRCodeModal';
 
@@ -51,6 +51,9 @@ export function Tickets({ events, userTickets, onViewEvent, onBrowseEvents }: Ti
       purchaseDate: string;
       ticketNumber: string;
       seatInfo?: string;
+      buyerName: string;
+      buyerEmail: string;
+      eventId: string;
     };
   } | null>(null);
 
@@ -129,7 +132,10 @@ export function Tickets({ events, userTickets, onViewEvent, onBrowseEvents }: Ti
         quantity: ticket.quantity,
         purchaseDate: ticket.purchaseDate,
         ticketNumber,
-        seatInfo
+        seatInfo,
+        buyerName: ticket.buyerInfo.name,
+        buyerEmail: ticket.buyerInfo.email,
+        eventId: ticket.eventId,
       }
     });
   };
@@ -202,20 +208,14 @@ export function Tickets({ events, userTickets, onViewEvent, onBrowseEvents }: Ti
                 View Details
               </Button>
               {isUpcoming && (
-                <>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleShowQR(ticket)}
-                  >
-                    <QrCode className="w-4 h-4 mr-1" />
-                    QR Code
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Download className="w-4 h-4 mr-1" />
-                    Download
-                  </Button>
-                </>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleShowQR(ticket)}
+                >
+                  <QrCode className="w-4 h-4 mr-1" />
+                  QR Code
+                </Button>
               )}
               {!isUpcoming && (
                 <Button variant="outline" size="sm">

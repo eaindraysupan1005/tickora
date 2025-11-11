@@ -1,5 +1,6 @@
 import { useMemo, useRef } from 'react';
 import { toJpeg } from 'html-to-image';
+import QRCode from 'react-qr-code';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -18,78 +19,34 @@ interface QRCodeModalProps {
     purchaseDate: string;
     ticketNumber: string;
     seatInfo?: string;
+    buyerName: string;
+    buyerEmail: string;
+    eventId: string;
   } | null;
 }
 
-const QR_SIZE = 25;
-
-const generatePattern = (input: string) => {
-  const pattern: boolean[] = [];
-  let hash = 0;
-
-  for (let i = 0; i < input.length; i++) {
-    const char = input.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-
-  for (let i = 0; i < QR_SIZE * QR_SIZE; i++) {
-    const val = Math.abs(hash + i * 2654435761) % 100;
-    pattern.push(val < 50);
-  }
-
-  const addFinderPattern = (startRow: number, startCol: number) => {
-    for (let r = 0; r < 7; r++) {
-      for (let c = 0; c < 7; c++) {
-        const index = (startRow + r) * QR_SIZE + (startCol + c);
-        if (index < pattern.length) {
-          const isEdge = r === 0 || r === 6 || c === 0 || c === 6;
-          const isInner = (r >= 2 && r <= 4) && (c >= 2 && c <= 4);
-          pattern[index] = isEdge || isInner;
-        }
-      }
+const encodeTicketPayload = (payload: Record<string, unknown>) => {
+  try {
+    if (typeof window === 'undefined') {
+      return '';
     }
-  };
-
-  addFinderPattern(0, 0);
-  addFinderPattern(0, 18);
-  addFinderPattern(18, 0);
-
-  return pattern;
-};
-
-// Simple QR Code component using CSS grid pattern
-const QRCodeDisplay = ({ pattern }: { pattern: boolean[] }) => {
-  const size = QR_SIZE;
-
-  return (
-    <div className="flex justify-center">
-      <div className="bg-white p-3 rounded-lg shadow-lg">
-        <div 
-          className="grid gap-0 border-2 border-gray-200"
-          style={{ 
-            gridTemplateColumns: `repeat(${size}, 6px)`,
-            gridTemplateRows: `repeat(${size}, 6px)`
-          }}
-        >
-          {pattern.map((filled, index) => (
-            <div
-              key={index}
-              className={`${filled ? 'bg-black' : 'bg-white'}`}
-            />
-          ))}
-        </div>
-        <p className="text-xs text-center text-gray-500 mt-1">Tickora QR Code</p>
-      </div>
-    </div>
-  );
+    const json = JSON.stringify(payload);
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(json);
+    let binary = '';
+    bytes.forEach((byte) => {
+      binary += String.fromCharCode(byte);
+    });
+    return encodeURIComponent(window.btoa(binary));
+  } catch (error) {
+    console.error('Failed to encode ticket payload:', error);
+    return '';
+  }
 };
 
 export function QRCodeModal({ isOpen, onClose, event, ticketInfo }: QRCodeModalProps) {
   if (!event || !ticketInfo) return null;
 
-  const qrData = `EVENTTIX:${event.id}:${ticketInfo.ticketNumber}:${ticketInfo.purchaseDate}`;
-  const qrPattern = useMemo(() => generatePattern(qrData), [qrData]);
   const cardRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
@@ -112,22 +69,81 @@ export function QRCodeModal({ isOpen, onClose, event, ticketInfo }: QRCodeModalP
   };
 
   const handleCopyTicketNumber = () => {
-    navigator.clipboard.writeText(ticketInfo.ticketNumber);
-    toast.success('Ticket number copied to clipboard');
+    if (!navigator.clipboard) {
+      toast.error('Clipboard access is unavailable in this browser');
+      return;
+    }
+    navigator.clipboard.writeText(ticketInfo.ticketNumber)
+      .then(() => toast.success('Ticket number copied to clipboard'))
+      .catch(() => toast.error('Unable to copy ticket number'));
   };
 
-  const handleShareTicket = () => {
+  const handleShareTicket = (link: string) => {
+    if (!link) {
+      toast.error('Unable to prepare share link');
+      return;
+    }
+
     if (navigator.share) {
       navigator.share({
-        title: `My ticket for ${event.title}`,
-        text: `I'm attending ${event.title} on ${formatDate(event.date)}`,
-        url: window.location.origin
+        title: `Ticket for ${event.title}`,
+        text: `Access ticket ${ticketInfo.ticketNumber} for ${event.title}`,
+        url: link
       });
     } else {
-      navigator.clipboard.writeText(`I'm attending ${event.title} on ${formatDate(event.date)} - ${window.location.origin}`);
-      toast.success('Event details copied to clipboard');
+      if (!navigator.clipboard) {
+        toast.error('Clipboard access is unavailable');
+        return;
+      }
+      navigator.clipboard.writeText(link)
+        .then(() => toast.success('Verification link copied to clipboard'))
+        .catch(() => toast.error('Unable to copy verification link'));
     }
   };
+
+  const verificationUrl = useMemo(() => {
+    const publicBaseUrl = import.meta.env.VITE_PUBLIC_APP_URL as string | undefined;
+    const origin = publicBaseUrl?.trim()
+      ? publicBaseUrl.replace(/\/$/, '')
+      : typeof window !== 'undefined'
+        ? window.location.origin
+        : '';
+
+    const encodedPayload = encodeTicketPayload({
+      eventTitle: event.title,
+      eventDate: event.date,
+      eventTime: event.time,
+      location: event.location,
+      organizer: event.organizer,
+      ticketNumber: ticketInfo.ticketNumber,
+      quantity: ticketInfo.quantity,
+      seatInfo: ticketInfo.seatInfo,
+      buyerName: ticketInfo.buyerName,
+      buyerEmail: ticketInfo.buyerEmail,
+      purchaseDate: ticketInfo.purchaseDate,
+      eventId: ticketInfo.eventId,
+    });
+
+    if (!encodedPayload) {
+      return '';
+    }
+
+    const base = origin || '';
+    return `${base}/verify-ticket?data=${encodedPayload}`;
+  }, [
+    event.date,
+    event.location,
+    event.organizer,
+    event.time,
+    event.title,
+    ticketInfo.buyerEmail,
+    ticketInfo.buyerName,
+    ticketInfo.eventId,
+    ticketInfo.purchaseDate,
+    ticketInfo.quantity,
+    ticketInfo.seatInfo,
+    ticketInfo.ticketNumber,
+  ]);
 
   const handleDownloadTicket = async () => {
     if (!cardRef.current) {
@@ -179,7 +195,12 @@ export function QRCodeModal({ isOpen, onClose, event, ticketInfo }: QRCodeModalP
           </DialogHeader>
 
           {/* QR Code */}
-          <QRCodeDisplay pattern={qrPattern} />
+          <div className="flex justify-center">
+            <div className="bg-white p-3 rounded-lg shadow-lg">
+              <QRCode value={verificationUrl || 'https://tickora.app'} size={180} level="H" />
+              <p className="text-xs text-center text-gray-500 mt-1">Tickora QR Code</p>
+            </div>
+          </div>
 
           {/* Ticket Information */}
           <Card>
@@ -233,6 +254,16 @@ export function QRCodeModal({ isOpen, onClose, event, ticketInfo }: QRCodeModalP
                   <span className="text-muted-foreground">Organizer:</span>
                   <span>{event.organizer}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Attendee:</span>
+                  <span>{ticketInfo.buyerName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Email:</span>
+                  <span className="truncate max-w-[160px]" title={ticketInfo.buyerEmail}>
+                    {ticketInfo.buyerEmail}
+                  </span>
+                </div>
                 {ticketInfo.seatInfo && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Seat:</span>
@@ -249,7 +280,13 @@ export function QRCodeModal({ isOpen, onClose, event, ticketInfo }: QRCodeModalP
               <Download className="w-3 h-3 mr-1" />
               Download
             </Button>
-            <Button variant="outline" onClick={handleShareTicket} className="w-full" size="sm">
+            <Button
+              variant="outline"
+              onClick={() => handleShareTicket(verificationUrl)}
+              className="w-full"
+              size="sm"
+              disabled={!verificationUrl}
+            >
               <Share className="w-3 h-3 mr-1" />
               Share
             </Button>

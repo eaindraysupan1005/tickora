@@ -14,7 +14,6 @@ The event management industry faces several challenges:
 - **High Commission Fees**: Traditional ticketing platforms charge substantial fees, reducing organizer profits
 - **Poor User Experience**: Complex interfaces and lengthy booking processes frustrate both organizers and attendees
 - **Limited Customization**: Lack of branding and customization options for event organizers
-- **Inefficient Communication**: Poor communication channels between organizers and attendees
 - **Security Concerns**: Ticket fraud and unauthorized resales are common issues
 
 ## Platform Name and Branding
@@ -35,7 +34,6 @@ The event management industry faces several challenges:
 - Create a scalable platform that can handle events of any size
 
 ### Secondary Objectives
-- Build a community-driven platform with social features
 - Provide detailed analytics and insights for event organizers
 - Support multiple event types and formats
 - Offer multilingual support for global accessibility
@@ -49,7 +47,7 @@ The event management industry faces several challenges:
 - **QR Code Generation**: Automated QR code generation for secure entry management
 - **Custom Branding**: White-label options with custom logos and themes
 - **Payment Processing**: Integrated payment gateway with multiple payment options
-- **Communication Tools**: Built-in messaging system for attendee communication
+
 
 ### For Attendees
 - **Event Discovery**: Advanced search and filtering options
@@ -144,7 +142,7 @@ The event management industry faces several challenges:
 ### User Management
 - User registration and authentication
 - Profile creation and management
-- Role-based access control (Organizer, Attendee, Admin)
+- Role-based access control (Organizer, Attendee)
 - Password reset and account recovery
 
 ### Event Management
@@ -163,7 +161,6 @@ The event management industry faces several challenges:
 
 ### Communication
 - Email notifications for bookings and updates
-- In-app messaging system
 - Event announcements and updates
 - Customer support ticketing system
 
@@ -188,14 +185,10 @@ The event management industry faces several challenges:
 - **Disaster Recovery**: Recovery time objective (RTO) of 4 hours
 
 ### Security Requirements
-- **Authentication**: Multi-factor authentication support
 - **Authorization**: Role-based access control with least privilege principle
 - **Data Protection**: Encryption at rest and in transit
-- **Audit Trail**: Comprehensive logging of all user actions
-- **Compliance**: GDPR, PCI DSS, and SOC 2 compliance
 
 ### Usability Requirements
-- **Accessibility**: WCAG 2.1 AA compliance for accessibility
 - **Mobile Responsiveness**: Optimized experience across all device types
 - **Browser Support**: Support for modern browsers (Chrome, Firefox, Safari, Edge)
 - **Internationalization**: Multi-language support with localization
