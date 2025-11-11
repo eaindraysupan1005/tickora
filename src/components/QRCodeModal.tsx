@@ -1,3 +1,5 @@
+import { useMemo, useRef } from 'react';
+import { toJpeg } from 'html-to-image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -19,50 +21,46 @@ interface QRCodeModalProps {
   } | null;
 }
 
-// Simple QR Code component using CSS grid pattern
-const QRCodeDisplay = ({ data }: { data: string }) => {
-  // Generate a pseudo-random pattern based on the data string
-  const generatePattern = (input: string) => {
-    const size = 25; // 25x25 grid
-    const pattern = [];
-    let hash = 0;
-    
-    // Simple hash function
-    for (let i = 0; i < input.length; i++) {
-      const char = input.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    
-    // Generate pattern based on hash
-    for (let i = 0; i < size * size; i++) {
-      const val = Math.abs(hash + i * 2654435761) % 100;
-      pattern.push(val < 50);
-    }
-    
-    // Add finder patterns (corners)
-    const addFinderPattern = (startRow: number, startCol: number) => {
-      for (let r = 0; r < 7; r++) {
-        for (let c = 0; c < 7; c++) {
-          const index = (startRow + r) * size + (startCol + c);
-          if (index < pattern.length) {
-            const isEdge = r === 0 || r === 6 || c === 0 || c === 6;
-            const isInner = (r >= 2 && r <= 4) && (c >= 2 && c <= 4);
-            pattern[index] = isEdge || isInner;
-          }
+const QR_SIZE = 25;
+
+const generatePattern = (input: string) => {
+  const pattern: boolean[] = [];
+  let hash = 0;
+
+  for (let i = 0; i < input.length; i++) {
+    const char = input.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+
+  for (let i = 0; i < QR_SIZE * QR_SIZE; i++) {
+    const val = Math.abs(hash + i * 2654435761) % 100;
+    pattern.push(val < 50);
+  }
+
+  const addFinderPattern = (startRow: number, startCol: number) => {
+    for (let r = 0; r < 7; r++) {
+      for (let c = 0; c < 7; c++) {
+        const index = (startRow + r) * QR_SIZE + (startCol + c);
+        if (index < pattern.length) {
+          const isEdge = r === 0 || r === 6 || c === 0 || c === 6;
+          const isInner = (r >= 2 && r <= 4) && (c >= 2 && c <= 4);
+          pattern[index] = isEdge || isInner;
         }
       }
-    };
-    
-    addFinderPattern(0, 0); // Top-left
-    addFinderPattern(0, 18); // Top-right  
-    addFinderPattern(18, 0); // Bottom-left
-    
-    return pattern;
+    }
   };
 
-  const pattern = generatePattern(data);
-  const size = 25;
+  addFinderPattern(0, 0);
+  addFinderPattern(0, 18);
+  addFinderPattern(18, 0);
+
+  return pattern;
+};
+
+// Simple QR Code component using CSS grid pattern
+const QRCodeDisplay = ({ pattern }: { pattern: boolean[] }) => {
+  const size = QR_SIZE;
 
   return (
     <div className="flex justify-center">
@@ -91,6 +89,10 @@ export function QRCodeModal({ isOpen, onClose, event, ticketInfo }: QRCodeModalP
   if (!event || !ticketInfo) return null;
 
   const qrData = `EVENTTIX:${event.id}:${ticketInfo.ticketNumber}:${ticketInfo.purchaseDate}`;
+  const qrPattern = useMemo(() => generatePattern(qrData), [qrData]);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -127,27 +129,57 @@ export function QRCodeModal({ isOpen, onClose, event, ticketInfo }: QRCodeModalP
     }
   };
 
-  const handleDownloadTicket = () => {
-    // Simulate ticket download
-    toast.success('Ticket downloaded successfully');
+  const handleDownloadTicket = async () => {
+    if (!cardRef.current) {
+      toast.error('Unable to locate ticket details');
+      return;
+    }
+
+    const closeBtn = closeButtonRef.current;
+    const actions = actionsRef.current;
+    const previousCloseDisplay = closeBtn?.style.display;
+    const previousActionsDisplay = actions?.style.display;
+    if (closeBtn) closeBtn.style.display = 'none';
+    if (actions) actions.style.display = 'none';
+
+    try {
+      const dataUrl = await toJpeg(cardRef.current, {
+        quality: 0.95,
+        backgroundColor: '#ffffff',
+        pixelRatio: window.devicePixelRatio || 2,
+      });
+
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `ticket-${ticketInfo.ticketNumber}.jpg`;
+      link.click();
+
+      toast.success('Ticket saved as JPG');
+    } catch (error) {
+      console.error('Error downloading ticket view:', error);
+      toast.error('Failed to download ticket');
+    } finally {
+      if (closeBtn) closeBtn.style.display = previousCloseDisplay || '';
+      if (actions) actions.style.display = previousActionsDisplay || '';
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-sm w-[90vw] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <Ticket className="w-4 h-4 text-primary" />
-            Your Event Ticket
-          </DialogTitle>
-          <DialogDescription className="text-sm">
-            Present this QR code at the event entrance
-          </DialogDescription>
-        </DialogHeader>
+        <div ref={cardRef} className="space-y-4">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Ticket className="w-4 h-4 text-primary" />
+              Your Event Ticket
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              Present this QR code at the event entrance
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-4">
           {/* QR Code */}
-          <QRCodeDisplay data={qrData} />
+          <QRCodeDisplay pattern={qrPattern} />
 
           {/* Ticket Information */}
           <Card>
@@ -212,7 +244,7 @@ export function QRCodeModal({ isOpen, onClose, event, ticketInfo }: QRCodeModalP
           </Card>
 
           {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-2">
+          <div ref={actionsRef} className="grid grid-cols-2 gap-2">
             <Button variant="outline" onClick={handleDownloadTicket} className="w-full" size="sm">
               <Download className="w-3 h-3 mr-1" />
               Download
@@ -226,12 +258,12 @@ export function QRCodeModal({ isOpen, onClose, event, ticketInfo }: QRCodeModalP
           {/* Important Notice */}
           <div className="bg-muted/50 p-2 rounded-lg">
             <p className="text-xs text-muted-foreground text-center">
-              <strong>Important:</strong> Please arrive 30 minutes before the event starts. 
+              <strong>Important:</strong> Please arrive 30 minutes before the event starts.
               This QR code is unique and cannot be reproduced.
             </p>
           </div>
 
-          <Button onClick={onClose} className="w-full" size="sm">
+          <Button ref={closeButtonRef} onClick={onClose} className="w-full" size="sm">
             Close
           </Button>
         </div>

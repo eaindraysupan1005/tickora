@@ -116,12 +116,7 @@ The event management industry faces several challenges:
 
 ### Security Measures
 - **QR Code Verification**: Unique, encrypted QR codes for each ticket
-- **PCI DSS Compliance**: Secure payment processing standards
 - **Data Encryption**: End-to-end encryption for sensitive data
-- **Multi-factor Authentication**: Enhanced account security options
-- **Rate Limiting**: Protection against brute force and DDoS attacks
-- **Regular Security Audits**: Periodic security assessments and vulnerability testing
-- **GDPR Compliance**: Data protection and privacy compliance
 - **Secure APIs**: Authentication and authorization for all API endpoints
 
 ## Expected Outcomes
