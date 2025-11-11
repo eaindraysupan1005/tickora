@@ -59,6 +59,14 @@ export default function App() {
 
   const categories = ['All', 'Conference', 'Workshop', 'Festival', 'Sports', 'Art & Culture', 'Food & Drink', 'Networking', 'Other'];
 
+  const transformEvents = useCallback((rawEvents: any[] = []): Event[] => {
+    return rawEvents.map((event: any) => ({
+      ...event,
+      organizer: event.organizers?.organization_name || event.organizer || 'Unknown Organization',
+      organizer_id: event.organizer_id,
+    }));
+  }, []);
+
   // Initialize app with sample data
   useEffect(() => {
     const initializeApp = async () => {
@@ -70,11 +78,7 @@ export default function App() {
         const result = await api.getEvents();
         if (result.events) {
           // Transform events to match Event interface
-          const transformedEvents = result.events.map((event: any) => ({
-            ...event,
-            organizer: event.organizers?.organization_name || 'Unknown Organization',
-            organizer_id: event.organizer_id
-          }));
+          const transformedEvents = transformEvents(result.events);
           setEvents(transformedEvents);
         } else {
           // No events available
@@ -91,7 +95,7 @@ export default function App() {
 
     // Simulate loading time
     setTimeout(initializeApp, 1000);
-  }, []);
+  }, [transformEvents]);
 
   // Load user tickets and organizer events when user logs in
   useEffect(() => {
@@ -165,6 +169,20 @@ export default function App() {
             
             console.log('Setting organizer events:', organizerEventsList);
             setEvents(organizerEventsList);
+          } else {
+            console.log('Loading public events for attendee...');
+            const publicEventsResponse = await api.getEvents();
+
+            let publicEvents: any[] = [];
+            if (publicEventsResponse.events && Array.isArray(publicEventsResponse.events)) {
+              publicEvents = publicEventsResponse.events;
+            } else if (Array.isArray(publicEventsResponse)) {
+              publicEvents = publicEventsResponse;
+            } else if (publicEventsResponse.data && Array.isArray(publicEventsResponse.data)) {
+              publicEvents = publicEventsResponse.data;
+            }
+
+            setEvents(transformEvents(publicEvents));
           }
         } catch (error) {
           console.error('Failed to load user data:', error);
@@ -173,7 +191,7 @@ export default function App() {
     };
 
     loadUserData();
-  }, [isLoggedIn, userProfile?.accessToken, userType]);
+  }, [isLoggedIn, userProfile?.accessToken, userType, transformEvents]);
 
   // Memoize filtered events to prevent unnecessary recalculations
   const filteredEvents = useMemo(() => {
@@ -341,6 +359,11 @@ export default function App() {
   const handleShowHelp = useCallback(() => {
     navigate('/help');
   }, [navigate]);
+
+  const handleResetFilters = useCallback(() => {
+    setSearchQuery('');
+    setCategoryFilter('All');
+  }, []);
 
   const handleViewEvent = useCallback((event: Event) => {
     setSelectedEvent(event);
@@ -531,90 +554,106 @@ export default function App() {
     </section>
   );
 
-  const HomeView = () => (
-    <div>
-      <HeroSection />
-      <StatsSection />
+  const HomeView = () => {
+    const showResetButton = searchQuery.trim() !== '' || categoryFilter !== 'All';
 
-      {/* Featured Events */}
-      {featuredEvents.length > 0 && (
-        <section className="py-16">
+    return (
+      <div>
+        <HeroSection />
+        <StatsSection />
+
+        {/* Featured Events */}
+        {featuredEvents.length > 0 && (
+          <section className="py-16">
+            <div className="container mx-auto px-4">
+              <div className="flex items-center gap-2 mb-8">
+                <Sparkles className="w-6 h-6 text-primary" />
+                <h2 className="text-3xl font-bold">Featured Events</h2>
+                <Badge variant="secondary" className="ml-2">Popular</Badge>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {featuredEvents.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onViewDetails={handleViewEvent}
+                    onBuyTicket={handleBuyTicket}
+                  />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* All Events */}
+        <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4">
-            <div className="flex items-center gap-2 mb-8">
-              <Sparkles className="w-6 h-6 text-primary" />
-              <h2 className="text-3xl font-bold">Featured Events</h2>
-              <Badge variant="secondary" className="ml-2">Popular</Badge>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+              <div>
+                <h2 className="text-3xl font-bold mb-2">
+                  {searchQuery ? `Search Results for "${searchQuery}"` : 'All Events'}
+                </h2>
+                <p className="text-muted-foreground">
+                  {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found
+                </p>
+              </div>
+              
+              <div className="flex flex-wrap gap-2 md:gap-4 items-center">
+                {showResetButton && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleResetFilters}
+                    className="whitespace-nowrap"
+                  >
+                    <Home className="w-4 h-4 mr-1" />
+                    Back to All Events
+                  </Button>
+                )}
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filter by category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {featuredEvents.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  onViewDetails={handleViewEvent}
-                  onBuyTicket={handleBuyTicket}
-                />
-              ))}
-            </div>
+
+            {filteredEvents.length === 0 ? (
+              <div className="text-center py-16">
+                <Calendar className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+                <h3 className="text-2xl font-semibold mb-2">No events found</h3>
+                <p className="text-muted-foreground mb-4">
+                  Try adjusting your search or filter criteria
+                </p>
+                <Button onClick={handleResetFilters}>
+                  <Home className="w-4 h-4 mr-2" />
+                  Back to All Events
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {filteredEvents.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onViewDetails={handleViewEvent}
+                    onBuyTicket={handleBuyTicket}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </section>
-      )}
-
-      {/* All Events */}
-      <section className="py-16 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-            <div>
-              <h2 className="text-3xl font-bold mb-2">
-                {searchQuery ? `Search Results for "${searchQuery}"` : 'All Events'}
-              </h2>
-              <p className="text-muted-foreground">
-                {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found
-              </p>
-            </div>
-            
-            <div className="flex gap-4">
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter by category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {filteredEvents.length === 0 ? (
-            <div className="text-center py-16">
-              <Calendar className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-2xl font-semibold mb-2">No events found</h3>
-              <p className="text-muted-foreground mb-4">
-                Try adjusting your search or filter criteria
-              </p>
-              <Button onClick={() => { setSearchQuery(''); setCategoryFilter('All'); }}>
-                Clear Filters
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredEvents.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  onViewDetails={handleViewEvent}
-                  onBuyTicket={handleBuyTicket}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-    </div>
-  );
+      </div>
+    );
+  };
 
   if (loading) {
     return (
